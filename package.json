@@ -1,7 +1,10 @@
 {
   "name": "convex-versioned-assets",
   "description": "A convex versioned assets component for Convex.",
-  "repository": "github:lgandecki/convex-versioned-assets",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lgandecki/convex-versioned-assets.git"
+  },
   "homepage": "https://github.com/lgandecki/convex-versioned-assets#readme",
   "bugs": {
     "url": "https://github.com/lgandecki/convex-versioned-assets/issues"
