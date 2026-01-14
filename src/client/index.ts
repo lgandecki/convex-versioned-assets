@@ -143,3 +143,6 @@ export function registerAssetRoutes(
     }),
   });
 }
+
+// Alias for backwards compatibility with asset-manager naming
+export { registerAssetRoutes as registerAssetFsRoutes };
