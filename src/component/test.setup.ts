@@ -1,3 +1,2 @@
-//
-// @ts-expect-error-next-line - import.meta.glob is available in test environment (Vite)
+// Test modules loaded via Vite's import.meta.glob
 export const modules = import.meta.glob("./**/!(*.*.*)*.*s");

@@ -472,3 +472,222 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
     });
   });
 });
+
+describe("getBlobForServing (action)", () => {
+  it("returns blob data for valid storage ID", async () => {
+    const t = convexTest(schema, modules);
+
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      { size: 100, contentType: "text/plain" },
+    );
+
+    const result = await t.action(api.assetFsHttp.getBlobForServing, {
+      storageId,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result).toBeInstanceOf(ArrayBuffer);
+  });
+
+  it("returns null for non-existent storage ID", async () => {
+    const t = convexTest(schema, modules);
+
+    // Create a storage ID then delete it to get a valid but non-existent ID
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      { size: 100, contentType: "text/plain" },
+    );
+
+    // Delete the storage
+    await t.run(async (ctx) => {
+      await ctx.storage.delete(storageId);
+    });
+
+    const result = await t.action(api.assetFsHttp.getBlobForServing, {
+      storageId,
+    });
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("getTextContent (action)", () => {
+  it("returns text content for Convex-stored text files", async () => {
+    const t = convexTest(schema, modules);
+
+    // Create a text file with known content
+    const testContent = "Hello, World! This is test content.";
+    let storageId: typeof api.assetManager.createVersionFromStorageId._args.storageId;
+
+    await t.run(async (ctx) => {
+      storageId = await ctx.storage.store(
+        new Blob([testContent], { type: "text/plain" }),
+      );
+    });
+
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "text-test",
+        basename: "hello.txt",
+        storageId: storageId!,
+      },
+    );
+
+    const result = await t.action(api.assetFsHttp.getTextContent, {
+      versionId,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.content).toBe(testContent);
+  });
+
+  it("returns null for non-existent version", async () => {
+    const t = convexTest(schema, modules);
+
+    // Create then delete a version to get a valid but non-existent ID
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      { size: 100, contentType: "text/plain" },
+    );
+
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "delete-test",
+        basename: "file.txt",
+        storageId,
+      },
+    );
+
+    // Delete the version directly
+    await t.run(async (ctx) => {
+      await ctx.db.delete(versionId);
+    });
+
+    const result = await t.action(api.assetFsHttp.getTextContent, {
+      versionId,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for version without storage", async () => {
+    const t = convexTest(schema, modules);
+
+    // Create a version without storage
+    const { versionId } = await t.mutation(api.assetManager.commitVersion, {
+      folderPath: "no-storage",
+      basename: "empty.txt",
+    });
+
+    const result = await t.action(api.assetFsHttp.getTextContent, {
+      versionId,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("handles JSON content correctly", async () => {
+    const t = convexTest(schema, modules);
+
+    const jsonContent = JSON.stringify({ message: "Hello", count: 42 });
+    let storageId: typeof api.assetManager.createVersionFromStorageId._args.storageId;
+
+    await t.run(async (ctx) => {
+      storageId = await ctx.storage.store(
+        new Blob([jsonContent], { type: "application/json" }),
+      );
+    });
+
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "json-test",
+        basename: "data.json",
+        storageId: storageId!,
+      },
+    );
+
+    const result = await t.action(api.assetFsHttp.getTextContent, {
+      versionId,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.content).toBe(jsonContent);
+    // Verify it's valid JSON
+    expect(() => JSON.parse(result!.content)).not.toThrow();
+  });
+});
+
+describe("getVersionInfo (internal query)", () => {
+  it("returns version info with storageId for Convex storage", async () => {
+    const t = convexTest(schema, modules);
+
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      { size: 500, contentType: "application/xml" },
+    );
+
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "info-test",
+        basename: "config.xml",
+        storageId,
+      },
+    );
+
+    const result = await t.query(internal.assetFsHttp.getVersionInfo, {
+      versionId,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.storageId).toEqual(storageId);
+  });
+
+  it("returns null for non-existent version", async () => {
+    const t = convexTest(schema, modules);
+
+    // Create then delete
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      { size: 100, contentType: "text/plain" },
+    );
+
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "info-delete",
+        basename: "file.txt",
+        storageId,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      await ctx.db.delete(versionId);
+    });
+
+    const result = await t.query(internal.assetFsHttp.getVersionInfo, {
+      versionId,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for version without storage", async () => {
+    const t = convexTest(schema, modules);
+
+    const { versionId } = await t.mutation(api.assetManager.commitVersion, {
+      folderPath: "no-storage-info",
+      basename: "empty.txt",
+    });
+
+    const result = await t.query(internal.assetFsHttp.getVersionInfo, {
+      versionId,
+    });
+
+    expect(result).toBeNull();
+  });
+});
