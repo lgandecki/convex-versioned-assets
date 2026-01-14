@@ -1,20 +1,15 @@
 import { httpRouter } from "convex/server";
-import { registerRoutes } from "convex-versioned-assets";
+import { registerAssetRoutes } from "convex-versioned-assets";
 import { components } from "./_generated/api";
 
 const http = httpRouter();
 
-// Initialize the component
-
-// Register HTTP routes for the component
-// This will expose a GET endpoint at /comments/last that returns the most recent comment
-registerRoutes(http, components.convexVersionedAssets, {
-  pathPrefix: "/comments",
+// Register HTTP routes for serving assets
+// This exposes:
+// - GET /assets/{folderPath}/{basename} - serve published files by path
+// - GET /assets/v/{versionId} - serve files by version ID
+registerAssetRoutes(http, components.versionedAssets, {
+  pathPrefix: "/assets",
 });
-
-// You can also register routes at different paths
-// convexVersionedAssets.registerRoutes(http, {
-//   path: "/api/comments/latest",
-// });
 
 export default http;

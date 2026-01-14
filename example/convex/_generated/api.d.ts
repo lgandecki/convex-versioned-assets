@@ -49,5 +49,5 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
-  convexVersionedAssets: import("convex-versioned-assets/_generated/component.js").ComponentApi<"convexVersionedAssets">;
+  versionedAssets: import("convex-versioned-assets/_generated/component.js").ComponentApi<"versionedAssets">;
 };

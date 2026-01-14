@@ -1,58 +1,100 @@
-import { action, mutation, query } from "./_generated/server.js";
+import { mutation, query } from "./_generated/server.js";
 import { components } from "./_generated/api.js";
-import { exposeApi } from "convex-versioned-assets";
 import { v } from "convex/values";
-import { Auth } from "convex/server";
 
-// Environment variables aren't available in the component,
-// so we need to pass it in as an argument to the component when necessary.
-const BASE_URL = process.env.BASE_URL ?? "https://pirate.monkeyness.com";
+// Demo asset path - a single image we'll version
+const DEMO_FOLDER = "demo";
+const DEMO_ASSET = "hero-image";
 
-export const addComment = mutation({
-  args: { text: v.string(), targetId: v.string() },
+/**
+ * Get the current published image for the demo.
+ */
+export const getCurrentImage = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.runQuery(
+      components.versionedAssets.assetManager.getPublishedFile,
+      { folderPath: DEMO_FOLDER, basename: DEMO_ASSET },
+    );
+  },
+});
+
+/**
+ * Get all versions of the demo image.
+ */
+export const getVersionHistory = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.runQuery(
+      components.versionedAssets.assetManager.getAssetVersions,
+      { folderPath: DEMO_FOLDER, basename: DEMO_ASSET },
+    );
+  },
+});
+
+/**
+ * Start an upload for a new version of the demo image.
+ */
+export const startImageUpload = mutation({
+  args: { filename: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runMutation(components.convexVersionedAssets.lib.add, {
-      text: args.text,
-      targetId: args.targetId,
-      userId: await getAuthUserId(ctx),
-    });
+    return await ctx.runMutation(
+      components.versionedAssets.assetManager.startUpload,
+      {
+        folderPath: DEMO_FOLDER,
+        basename: DEMO_ASSET,
+        filename: args.filename,
+      },
+    );
   },
 });
 
-export const listComments = query({
-  args: { targetId: v.string() },
+/**
+ * Finish the upload after file has been uploaded to presigned URL.
+ * For Convex storage, we need to pass the storageId from the upload response.
+ */
+export const finishImageUpload = mutation({
+  args: {
+    intentId: v.string(),
+    storageId: v.string(),
+    size: v.number(),
+    contentType: v.string(),
+  },
   handler: async (ctx, args) => {
-    return await ctx.runQuery(components.convexVersionedAssets.lib.list, {
-      targetId: args.targetId,
-    });
+    return await ctx.runMutation(
+      components.versionedAssets.assetManager.finishUpload,
+      {
+        intentId: args.intentId as never,
+        uploadResponse: { storageId: args.storageId },
+        size: args.size,
+        contentType: args.contentType,
+      },
+    );
   },
 });
 
-export const translateComment = action({
-  args: { commentId: v.string() },
+/**
+ * Restore a previous version as the current published version.
+ */
+export const restoreVersion = mutation({
+  args: { versionId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runAction(components.convexVersionedAssets.lib.translate, {
-      baseUrl: BASE_URL,
-      commentId: args.commentId,
-    });
+    return await ctx.runMutation(
+      components.versionedAssets.assetManager.restoreVersion,
+      { versionId: args.versionId as never },
+    );
   },
 });
 
-// Here is an alternative way to use the component's methods directly by re-exporting
-// the component's API:
-export const { list, add, translate } = exposeApi(components.convexVersionedAssets, {
-  auth: async (ctx, operation) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null && operation.type !== "read") {
-      throw new Error("Unauthorized");
-    }
-    return userId;
+/**
+ * Get preview URL for any version (including archived).
+ */
+export const getVersionPreview = query({
+  args: { versionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.runQuery(
+      components.versionedAssets.assetFsHttp.getVersionPreviewUrl,
+      { versionId: args.versionId as never },
+    );
   },
-  baseUrl: BASE_URL,
 });
-
-// You can also register HTTP routes for the component. See http.ts for an example.
-
-async function getAuthUserId(ctx: { auth: Auth }) {
-  return (await ctx.auth.getUserIdentity())?.subject ?? "anonymous";
-}

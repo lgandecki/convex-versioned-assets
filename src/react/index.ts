@@ -1,7 +1,13 @@
 "use client";
 
-// This is where React components / hooks go.
+/**
+ * React hooks for convex-versioned-assets.
+ *
+ * Note: Most asset queries work directly with useQuery from convex/react.
+ * This module provides specialized hooks for common patterns.
+ */
 
-export const useMyComponent = () => {
-  return {};
-};
+// Placeholder - add React hooks as needed
+// Example: useAssetUrl, useAssetVersions, etc.
+
+export {};
