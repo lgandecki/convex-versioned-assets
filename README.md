@@ -1,20 +1,9 @@
 # convex-versioned-assets
 
-A Convex component for managing versioned assets with full version history,
-instant rollback, and direct CDN delivery.
+A Convex component for managing **versioned assets** with full history,
+automatic CDN delivery, and real-time sync.
 
 [![npm version](https://badge.fury.io/js/convex-versioned-assets.svg)](https://badge.fury.io/js/convex-versioned-assets)
-
-## Features
-
-- **Version History**: Every upload creates a new version, keeping full history
-- **Instant Rollback**: Restore any previous version with one click
-- **Direct CDN Delivery**: Serve files via HTTP routes with proper caching
-- **Folder Organization**: Hierarchical folder structure for organizing assets
-- **Multiple Storage Backends**: Support for Convex storage and Cloudflare R2
-- **Stable URLs**: Path-based URLs that always serve the latest published
-  version
-- **Version URLs**: Immutable URLs for specific versions
 
 ## Used In Production
 
@@ -23,73 +12,133 @@ This component powers the asset management system at
 ([GitHub](https://github.com/TheBrainFamily/bookgenius)), an interactive ebook
 platform with AI-powered content.
 
-## Installation
+## Why This Component?
+
+Most file storage solutions treat uploads as simple key-value stores: upload a
+file, get a URL. When you upload a new version, you get a new URL and must
+update all references manually.
+
+**convex-versioned-assets** takes a different approach:
+
+- **Stable references**: An asset at `images/hero` always resolves to its
+  current published version
+- **Full version history**: Every upload creates a new version; old versions are
+  archived, not deleted
+- **Instant rollback**: Restore any previous version with a single mutation
+- **Direct CDN delivery**: File URLs point directly to Cloudflare's edge
+  network, not through Convex
+- **Real-time sync**: Changelog-driven subscriptions notify your app of any
+  changes
+
+```
+Traditional Storage          convex-versioned-assets
+─────────────────────────    ─────────────────────────
+Upload v1 → URL_A            Upload v1 → images/hero → v1 (published)
+Upload v2 → URL_B            Upload v2 → images/hero → v2 (published)
+                                                     → v1 (archived)
+Must update all refs!        All refs auto-resolve to v2
+Can't restore v1             Restore v1 anytime
+```
+
+## Features
+
+| Feature                      | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| **Version history**          | Every upload preserved, never lost       |
+| **Publish/archive workflow** | Explicit states: `published`, `archived` |
+| **Instant rollback**         | Restore any previous version             |
+| **Audit trail**              | Full changelog with who/what/when        |
+| **Direct CDN URLs**          | Bypass Convex for file delivery          |
+| **Dual storage backends**    | Convex storage or Cloudflare R2          |
+| **Folder organization**      | Virtual filesystem with `/path/to/asset` |
+| **Real-time sync**           | Subscribe to changes via changelog       |
+
+## Quick Start
+
+### Installation
 
 ```bash
 npm install convex-versioned-assets
 ```
 
-Create a `convex.config.ts` file in your app's `convex/` folder:
+### Configuration
 
-```ts
+```typescript
 // convex/convex.config.ts
 import { defineApp } from "convex/server";
-import versionedAssets from "convex-versioned-assets/convex.config.js";
+import versionedAssets from "convex-versioned-assets/convex.config";
 
 const app = defineApp();
 app.use(versionedAssets);
-
 export default app;
 ```
 
-## Usage
+### Upload a File
 
-### Uploading Files
-
-```ts
-import { components } from "./_generated/api";
-
-// Start upload - get presigned URL
+```typescript
+// 1. Start the upload (get presigned URL)
 const { intentId, uploadUrl } = await ctx.runMutation(
   components.versionedAssets.assetManager.startUpload,
   { folderPath: "images", basename: "hero", filename: "hero.png" },
 );
 
-// Upload file to the presigned URL, then finish
+// 2. Upload to the presigned URL
+await fetch(uploadUrl, {
+  method: "PUT",
+  body: file,
+  headers: { "Content-Type": file.type },
+});
+
+// 3. Finalize (creates version, publishes automatically)
 await ctx.runMutation(components.versionedAssets.assetManager.finishUpload, {
   intentId,
-  uploadResponse: { storageId },
-  size,
-  contentType,
+  size: file.size,
+  contentType: file.type,
 });
 ```
 
-### Querying Files
+### Serve a File
 
-```ts
-// Get the current published version
-const file = await ctx.runQuery(
-  components.versionedAssets.assetManager.getPublishedFile,
-  { folderPath: "images", basename: "hero" },
-);
+```typescript
+// convex/files.ts
+import { query } from "./_generated/server";
+import { components } from "./_generated/api";
+import { v } from "convex/values";
 
-// Get version history
-const versions = await ctx.runQuery(
-  components.versionedAssets.assetManager.getAssetVersions,
-  { folderPath: "images", basename: "hero" },
-);
-
-// Restore a previous version
-await ctx.runMutation(components.versionedAssets.assetManager.restoreVersion, {
-  versionId,
+export const getFileUrl = query({
+  args: { folderPath: v.string(), basename: v.string() },
+  handler: async (ctx, { folderPath, basename }) => {
+    return ctx.runQuery(
+      components.versionedAssets.assetManager.getPublishedFile,
+      {
+        folderPath,
+        basename,
+      },
+    );
+  },
 });
 ```
 
-### HTTP Routes
+```tsx
+// React component
+function Image({ path, name }: { path: string; name: string }) {
+  const file = useQuery(api.files.getFileUrl, {
+    folderPath: path,
+    basename: name,
+  });
+  if (!file) return null;
+  return <img src={file.url} alt={name} />;
+}
+```
 
-Register HTTP routes to serve files directly:
+When you upload a new version of `images/hero`, all components using this query
+automatically re-render with the new URL.
 
-```ts
+## HTTP Routes
+
+Register HTTP routes to serve files directly via CDN:
+
+```typescript
 // convex/http.ts
 import { httpRouter } from "convex/server";
 import { registerAssetRoutes } from "convex-versioned-assets";
@@ -108,6 +157,142 @@ This exposes:
 
 - `GET /assets/{folderPath}/{basename}` - Serve the latest published version
 - `GET /assets/v/{versionId}` - Serve a specific version by ID
+
+### Architecture: Direct CDN Delivery
+
+Unlike solutions that route every file request through your backend,
+**convex-versioned-assets** returns URLs that point directly to the CDN:
+
+```
+┌─────────────────┐     1. useQuery (reactive)      ┌─────────────────┐
+│                 │ ◄────────────────────────────── │                 │
+│   React App     │     returns { url, versionId }  │     Convex      │
+│                 │                                 │                 │
+└────────┬────────┘                                 └─────────────────┘
+         │
+         │ 2. Direct request (no Convex hop!)
+         │    https://cdn.example.com/images/hero-v3.png
+         ▼
+┌─────────────────┐
+│   Cloudflare    │  ← Served from nearest edge
+│      CDN        │  ← ~10-50ms globally
+└─────────────────┘
+```
+
+## Version Management
+
+### How Versions Work
+
+Each asset maintains a pointer to its current published version:
+
+```
+Asset: images/hero
+├── publishedVersionId → points to v3
+│
+└── Versions:
+    ├── v1 (archived) - uploaded Jan 1
+    ├── v2 (archived) - uploaded Jan 15
+    └── v3 (published) - uploaded Feb 1  ← current
+```
+
+### Listing Versions
+
+```typescript
+const versions = await ctx.runQuery(
+  components.versionedAssets.assetManager.getAssetVersions,
+  {
+    folderPath: "images",
+    basename: "hero",
+  },
+);
+
+// Returns all versions with metadata:
+// [
+//   { version: 3, state: "published", createdAt: ..., size: ..., contentType: ... },
+//   { version: 2, state: "archived", createdAt: ..., size: ..., contentType: ... },
+//   { version: 1, state: "archived", createdAt: ..., size: ..., contentType: ... },
+// ]
+```
+
+### Restoring a Previous Version
+
+```typescript
+await ctx.runMutation(components.versionedAssets.assetManager.restoreVersion, {
+  versionId: previousVersionId,
+});
+// v1 is now published, v3 is archived
+// All queries automatically return v1's URL
+```
+
+## Real-Time Sync with Changelog
+
+The component maintains a changelog of all operations, enabling efficient sync:
+
+```typescript
+// Subscribe to changes since a cursor
+const { changes, nextCursor } = await ctx.runQuery(
+  components.versionedAssets.changelog.listSince,
+  {
+    cursor: { createdAt: lastSync, id: "" },
+    limit: 100,
+  },
+);
+```
+
+Change types tracked:
+
+- `folder:create`, `folder:update`, `folder:delete`
+- `asset:create`, `asset:publish`, `asset:update`, `asset:archive`,
+  `asset:delete`
+- `asset:move`, `asset:rename`
+
+## Storage Backends
+
+### Convex Storage (Default)
+
+Built-in, zero configuration. Good for development and smaller files.
+
+### Cloudflare R2
+
+For production workloads with global CDN delivery:
+
+```typescript
+await ctx.runMutation(
+  components.versionedAssets.assetManager.configureStorageBackend,
+  {
+    backend: "r2",
+    r2PublicUrl: "https://assets.yourdomain.com",
+    r2KeyPrefix: "myapp", // optional namespace
+  },
+);
+```
+
+## API Reference
+
+### Mutations
+
+| Function                  | Description                     |
+| ------------------------- | ------------------------------- |
+| `configureStorageBackend` | Set storage backend (convex/r2) |
+| `startUpload`             | Begin upload, get presigned URL |
+| `finishUpload`            | Complete upload, create version |
+| `createFolderByPath`      | Create a folder                 |
+| `restoreVersion`          | Restore a previous version      |
+| `moveAsset`               | Move asset to different folder  |
+| `renameAsset`             | Rename an asset                 |
+| `deleteAsset`             | Soft-delete an asset            |
+
+### Queries
+
+| Function                     | Description                        |
+| ---------------------------- | ---------------------------------- |
+| `getPublishedFile`           | Get published version with URL     |
+| `listPublishedFilesInFolder` | List all published files in folder |
+| `getAssetVersions`           | Get all versions of an asset       |
+| `listFolders`                | List subfolders                    |
+| `getFolder`                  | Get folder by path                 |
+| `changelog.listSince`        | Get changes since cursor           |
+| `changelog.listForFolder`    | Get changes for specific folder    |
 
 ## Demo
 
