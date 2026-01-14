@@ -1,146 +1,123 @@
-# Convex Component Template
+# convex-versioned-assets
 
-This is a Convex component, ready to be published on npm.
+A Convex component for managing versioned assets with full version history,
+instant rollback, and direct CDN delivery.
 
-To create your own component:
+[![npm version](https://badge.fury.io/js/convex-versioned-assets.svg)](https://badge.fury.io/js/convex-versioned-assets)
 
-1. Write code in src/component for your component. Component-specific tables,
-   queries, mutations, and actions go here.
-1. Write code in src/client for the Class that interfaces with the component.
-   This is the bridge your users will access to get information into and out of
-   your component
-1. Write example usage in example/convex/example.ts.
-1. Delete the text in this readme until `---` and flesh out the README.
-1. Publish to npm with `npm run alpha` or `npm run release`.
+## Features
 
-To develop your component run a dev process in the example project:
+- **Version History**: Every upload creates a new version, keeping full history
+- **Instant Rollback**: Restore any previous version with one click
+- **Direct CDN Delivery**: Serve files via HTTP routes with proper caching
+- **Folder Organization**: Hierarchical folder structure for organizing assets
+- **Multiple Storage Backends**: Support for Convex storage and Cloudflare R2
+- **Stable URLs**: Path-based URLs that always serve the latest published
+  version
+- **Version URLs**: Immutable URLs for specific versions
 
-```sh
-npm i
-npm run dev
-```
+## Used In Production
 
-`npm i` will do the install and an initial build. `npm run dev` will start a
-file watcher to re-build the component, as well as the example project frontend
-and backend, which does codegen and installs the component.
-
-Modify the schema and index files in src/component/ to define your component.
-
-Write a client for using this component in src/client/index.ts.
-
-If you won't be adding frontend code (e.g. React components) to this component
-you can delete "./react" references in package.json and "src/react/" directory.
-If you will be adding frontend code, add a peer dependency on React in
-package.json.
-
-### Component Directory structure
-
-```
-.
-├── README.md           documentation of your component
-├── package.json        component name, version number, other metadata
-├── package-lock.json   Components are like libraries, package-lock.json
-│                       is .gitignored and ignored by consumers.
-├── src
-│   ├── component/
-│   │   ├── _generated/ Files here are generated for the component.
-│   │   ├── convex.config.ts  Name your component here and use other components
-│   │   ├── lib.ts    Define functions here and in new files in this directory
-│   │   └── schema.ts   schema specific to this component
-│   ├── client/
-│   │   └── index.ts    Code that needs to run in the app that uses the
-│   │                   component. Generally the app interacts directly with
-│   │                   the component's exposed API (src/component/*).
-│   └── react/          Code intended to be used on the frontend goes here.
-│       │               Your are free to delete this if this component
-│       │               does not provide code.
-│       └── index.ts
-├── example/            example Convex app that uses this component
-│   └── convex/
-│       ├── _generated/       Files here are generated for the example app.
-│       ├── convex.config.ts  Imports and uses this component
-│       ├── myFunctions.ts    Functions that use the component
-│       └── schema.ts         Example app schema
-└── dist/               Publishing artifacts will be created here.
-```
-
----
-
-# Convex Convex Versioned Assets
-
-[![npm version](https://badge.fury.io/js/@example%2Fconvex-versioned-assets.svg)](https://badge.fury.io/js/@example%2Fconvex-versioned-assets)
-
-<!-- START: Include on https://convex.dev/components -->
-
-- [ ] What is some compelling syntax as a hook?
-- [ ] Why should you use this component?
-- [ ] Links to docs / other resources?
-
-Found a bug? Feature request?
-[File it here](https://github.com/lgandecki/convex-versioned-assets/issues).
+This component powers the asset management system at
+[BookGenius](https://bookgenius.net)
+([GitHub](https://github.com/TheBrainFamily/bookgenius)), an interactive ebook
+platform with AI-powered content.
 
 ## Installation
 
-Create a `convex.config.ts` file in your app's `convex/` folder and install the
-component by calling `use`:
+```bash
+npm install convex-versioned-assets
+```
+
+Create a `convex.config.ts` file in your app's `convex/` folder:
 
 ```ts
 // convex/convex.config.ts
 import { defineApp } from "convex/server";
-import convexVersionedAssets from "convex-versioned-assets/convex.config.js";
+import versionedAssets from "convex-versioned-assets/convex.config.js";
 
 const app = defineApp();
-app.use(convexVersionedAssets);
+app.use(versionedAssets);
 
 export default app;
 ```
 
 ## Usage
 
+### Uploading Files
+
 ```ts
 import { components } from "./_generated/api";
 
-export const addComment = mutation({
-  args: { text: v.string(), targetId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.runMutation(components.convexVersionedAssets.lib.add, {
-      text: args.text,
-      targetId: args.targetId,
-      userId: await getAuthUserId(ctx),
-    });
-  },
+// Start upload - get presigned URL
+const { intentId, uploadUrl } = await ctx.runMutation(
+  components.versionedAssets.assetManager.startUpload,
+  { folderPath: "images", basename: "hero", filename: "hero.png" },
+);
+
+// Upload file to the presigned URL, then finish
+await ctx.runMutation(components.versionedAssets.assetManager.finishUpload, {
+  intentId,
+  uploadResponse: { storageId },
+  size,
+  contentType,
 });
 ```
 
-See more example usage in [example.ts](./example/convex/example.ts).
+### Querying Files
+
+```ts
+// Get the current published version
+const file = await ctx.runQuery(
+  components.versionedAssets.assetManager.getPublishedFile,
+  { folderPath: "images", basename: "hero" },
+);
+
+// Get version history
+const versions = await ctx.runQuery(
+  components.versionedAssets.assetManager.getAssetVersions,
+  { folderPath: "images", basename: "hero" },
+);
+
+// Restore a previous version
+await ctx.runMutation(components.versionedAssets.assetManager.restoreVersion, {
+  versionId,
+});
+```
 
 ### HTTP Routes
 
-You can register HTTP routes for the component to expose HTTP endpoints:
+Register HTTP routes to serve files directly:
 
 ```ts
+// convex/http.ts
 import { httpRouter } from "convex/server";
-import { registerRoutes } from "convex-versioned-assets";
+import { registerAssetRoutes } from "convex-versioned-assets";
 import { components } from "./_generated/api";
 
 const http = httpRouter();
 
-registerRoutes(http, components.convexVersionedAssets, {
-  pathPrefix: "/comments",
+registerAssetRoutes(http, components.versionedAssets, {
+  pathPrefix: "/assets",
 });
 
 export default http;
 ```
 
-This will expose a GET endpoint that returns the most recent comment as JSON.
-The endpoint requires a `targetId` query parameter. See
-[http.ts](./example/convex/http.ts) for a complete example.
+This exposes:
 
-<!-- END: Include on https://convex.dev/components -->
+- `GET /assets/{folderPath}/{basename}` - Serve the latest published version
+- `GET /assets/v/{versionId}` - Serve a specific version by ID
 
-Run the example:
+## Demo
 
-```sh
-npm i
+Run the example app:
+
+```bash
+npm install
 npm run dev
 ```
+
+## License
+
+Apache-2.0
