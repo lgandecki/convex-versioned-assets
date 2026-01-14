@@ -13,7 +13,9 @@
   "license": "Apache-2.0",
   "keywords": [
     "convex",
-    "component"
+    "component",
+    "assets",
+    "media"
   ],
   "type": "module",
   "scripts": {
@@ -35,7 +37,9 @@
     "preversion": "npm ci && npm run build:clean && run-p test lint typecheck",
     "alpha": "npm version prerelease --preid alpha && npm publish --tag alpha && git push --follow-tags",
     "release": "npm version patch && npm publish && git push --follow-tags",
-    "version": "vim -c 'normal o' -c 'normal o## '$npm_package_version CHANGELOG.md && prettier -w CHANGELOG.md && git add CHANGELOG.md"
+    "version": "vim -c 'normal o' -c 'normal o## '$npm_package_version CHANGELOG.md && prettier -w CHANGELOG.md && git add CHANGELOG.md",
+    "docs:sync": "cp README.md docs/README.md",
+    "docs:serve": "npm run docs:sync && npx serve docs"
   },
   "files": [
     "dist",

@@ -1,6 +1,7 @@
 # Public Files with CDN
 
-This guide covers serving public files through Cloudflare's CDN for maximum performance and global distribution.
+This guide covers serving public files through Cloudflare's CDN for maximum
+performance and global distribution.
 
 ## Overview
 
@@ -44,7 +45,8 @@ https://cdn.yourdomain.com/{r2KeyPrefix}/{intentId}/{filename}
 ```
 
 - **r2KeyPrefix**: Optional namespace to share bucket across apps
-- **intentId**: Unique ID per upload (ensures cache invalidation on new versions)
+- **intentId**: Unique ID per upload (ensures cache invalidation on new
+  versions)
 - **filename**: Original filename (human-readable URLs)
 
 Example:
@@ -59,11 +61,14 @@ https://assets.myapp.com/myapp/k57x9m2n4p/background-music.mp3
 
 ```typescript
 // Run once to configure storage backend
-await ctx.runMutation(components.assetManager.assetManager.configureStorageBackend, {
-  backend: "r2",
-  r2PublicUrl: "https://assets.yourdomain.com",
-  r2KeyPrefix: "myapp", // Optional
-});
+await ctx.runMutation(
+  components.versionedAssets.assetManager.configureStorageBackend,
+  {
+    backend: "r2",
+    r2PublicUrl: "https://assets.yourdomain.com",
+    r2KeyPrefix: "myapp", // Optional
+  },
+);
 ```
 
 ### Step 2: Query for Public File URL
@@ -79,19 +84,25 @@ import { v } from "convex/values";
 export const getPublicFile = query({
   args: { folderPath: v.string(), basename: v.string() },
   handler: async (ctx, { folderPath, basename }) => {
-    return await ctx.runQuery(components.assetManager.assetManager.getPublishedFile, {
-      folderPath,
-      basename,
-    });
+    return await ctx.runQuery(
+      components.versionedAssets.assetManager.getPublishedFile,
+      {
+        folderPath,
+        basename,
+      },
+    );
   },
 });
 
 export const listPublicFiles = query({
   args: { folderPath: v.string() },
   handler: async (ctx, { folderPath }) => {
-    return await ctx.runQuery(components.assetManager.assetManager.listPublishedFilesInFolder, {
-      folderPath,
-    });
+    return await ctx.runQuery(
+      components.versionedAssets.assetManager.listPublishedFilesInFolder,
+      {
+        folderPath,
+      },
+    );
   },
 });
 ```
@@ -112,7 +123,10 @@ export function PublicImage({
   basename: string;
   alt: string;
 }) {
-  const file = useQuery(api.publicFiles.getPublicFile, { folderPath, basename });
+  const file = useQuery(api.publicFiles.getPublicFile, {
+    folderPath,
+    basename,
+  });
 
   if (!file) return <div>Loading...</div>;
 
@@ -130,7 +144,10 @@ export function PublicAudioPlayer({
   folderPath: string;
   basename: string;
 }) {
-  const file = useQuery(api.publicFiles.getPublicFile, { folderPath, basename });
+  const file = useQuery(api.publicFiles.getPublicFile, {
+    folderPath,
+    basename,
+  });
 
   if (!file) return null;
 
@@ -173,7 +190,8 @@ export function FileGallery({ folderPath }: { folderPath: string }) {
 
 When a file is updated, the CDN URL changes automatically:
 
-1. **Before update**: Query returns `https://cdn.example.com/app/abc123/song.mp3`
+1. **Before update**: Query returns
+   `https://cdn.example.com/app/abc123/song.mp3`
 2. **Admin uploads a new version**
 3. **After update**: Query returns `https://cdn.example.com/app/def456/song.mp3`
 4. **React re-renders** with new URL
@@ -227,22 +245,28 @@ function getR2Config() {
 export const startUpload = mutation({
   args: { folderPath: v.string(), basename: v.string(), filename: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runMutation(components.assetManager.assetManager.startUpload, {
-      ...args,
-      r2Config: getR2Config(),
-    });
+    return await ctx.runMutation(
+      components.versionedAssets.assetManager.startUpload,
+      {
+        ...args,
+        r2Config: getR2Config(),
+      },
+    );
   },
 });
 
 export const finishUpload = mutation({
   args: { intentId: v.string(), size: v.number(), contentType: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runMutation(components.assetManager.assetManager.finishUpload, {
-      intentId: args.intentId as any,
-      size: args.size,
-      contentType: args.contentType,
-      r2Config: getR2Config(),
-    });
+    return await ctx.runMutation(
+      components.versionedAssets.assetManager.finishUpload,
+      {
+        intentId: args.intentId as any,
+        size: args.size,
+        contentType: args.contentType,
+        r2Config: getR2Config(),
+      },
+    );
   },
 });
 ```
@@ -251,16 +275,27 @@ export const finishUpload = mutation({
 
 ```typescript
 // lib/upload.ts
-async function uploadPublicFile(file: File, folderPath: string, basename: string) {
+async function uploadPublicFile(
+  file: File,
+  folderPath: string,
+  basename: string,
+) {
   // 1. Start upload - get presigned URL
-  const { intentId, uploadUrl, backend } = await convex.mutation(api.uploads.startUpload, {
-    folderPath,
-    basename,
-    filename: file.name,
-  });
+  const { intentId, uploadUrl, backend } = await convex.mutation(
+    api.uploads.startUpload,
+    {
+      folderPath,
+      basename,
+      filename: file.name,
+    },
+  );
 
   // 2. Upload to R2 (use PUT, not POST)
-  await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+  await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
 
   // 3. Finish upload - create version record
   const result = await convex.mutation(api.uploads.finishUpload, {
@@ -334,7 +369,10 @@ function ResponsiveImage({ folderPath, basename }: Props) {
 
 ```tsx
 function LazyImage({ folderPath, basename }: Props) {
-  const file = useQuery(api.publicFiles.getPublicFile, { folderPath, basename });
+  const file = useQuery(api.publicFiles.getPublicFile, {
+    folderPath,
+    basename,
+  });
 
   return <img src={file?.url} loading="lazy" alt="" />;
 }
@@ -352,5 +390,6 @@ function LazyImage({ folderPath, basename }: Props) {
 
 ## Next Steps
 
-- [Private Files with Signed URLs](./private-files.md) - For auth-protected content
+- [Private Files with Signed URLs](./private-files.md) - For auth-protected
+  content
 - [Setting Up R2](./setup-r2.md) - Configure Cloudflare R2 storage

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>convex-versioned-assets</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta
+      name="description"
+      content="A Convex component for managing versioned assets with full history, automatic CDN delivery, and real-time sync."
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css"
+    />
+    <style>
+      :root {
+        --theme-color: #f97316;
+        --theme-color-light: #fdba74;
+      }
+      .sidebar-nav > ul > li > a {
+        font-weight: 600;
+      }
+      .markdown-section code {
+        border-radius: 4px;
+      }
+      .markdown-section pre {
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      window.$docsify = {
+        name: "convex-versioned-assets",
+        repo: "lgandecki/convex-versioned-assets",
+        loadSidebar: true,
+        subMaxLevel: 1,
+        auto2top: true,
+        homepage: "README.md",
+        search: {
+          placeholder: "Search",
+          noData: "No results",
+          depth: 3,
+        },
+        copyCode: {
+          buttonText: "Copy",
+          successText: "Copied",
+        },
+      };
+    </script>
+    <!-- Docsify core -->
+    <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+    <!-- Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+    <!-- Syntax highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-typescript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-tsx.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  </body>
+</html>

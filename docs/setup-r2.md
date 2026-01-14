@@ -1,11 +1,12 @@
 # Setting Up Cloudflare R2
 
-This guide walks you through configuring Cloudflare R2 as a storage backend for the asset-manager component.
+This guide walks you through configuring Cloudflare R2 as a storage backend for
+convex-versioned-assets.
 
 ## Prerequisites
 
 - A Cloudflare account
-- A Convex project with the asset-manager component installed
+- A Convex project with `convex-versioned-assets` installed
 
 ## Step 1: Create an R2 Bucket
 
@@ -44,26 +45,18 @@ CORS must be configured to allow uploads from your frontend.
       "http://localhost:3001",
       "https://your-app.com"
     ],
-    "AllowedMethods": [
-      "GET",
-      "PUT",
-      "HEAD"
-    ],
-    "AllowedHeaders": [
-      "*"
-    ],
-    "ExposeHeaders": [
-      "ETag",
-      "Content-Length",
-      "Content-Type"
-    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
     "MaxAgeSeconds": 3600
   }
 ]
 ```
 
 **Important notes:**
-- Include all origins where uploads will occur (localhost for dev, production domain)
+
+- Include all origins where uploads will occur (localhost for dev, production
+  domain)
 - `PUT` is required for R2 uploads (not POST)
 - `AllowedHeaders: ["*"]` is required for presigned URL uploads
 - Add your production domain before deploying
@@ -94,6 +87,7 @@ R2_PUBLIC_URL=https://assets.yourdomain.com
 ```
 
 To find your account ID and endpoint:
+
 1. Go to R2 dashboard
 2. Click on your bucket
 3. The endpoint is shown in the bucket details
@@ -111,13 +105,13 @@ export const configureR2 = mutation({
   args: {},
   handler: async (ctx) => {
     await ctx.runMutation(
-      components.assetManager.assetManager.configureStorageBackend,
+      components.versionedAssets.assetManager.configureStorageBackend,
       {
         backend: "r2",
         r2PublicUrl: process.env.R2_PUBLIC_URL!,
         // Optional: prefix to namespace files when sharing a bucket
         r2KeyPrefix: "my-app",
-      }
+      },
     );
   },
 });
@@ -160,13 +154,13 @@ Test the configuration by uploading a file:
 ```typescript
 // In your app
 const { intentId, uploadUrl, backend } = await ctx.runMutation(
-  components.assetManager.assetManager.startUpload,
+  components.versionedAssets.assetManager.startUpload,
   {
     folderPath: "test",
     basename: "hello",
     filename: "hello.txt",
     r2Config: getR2Config(),
-  }
+  },
 );
 
 console.log("Backend:", backend); // Should be "r2"
@@ -198,5 +192,7 @@ If you see CORS errors in the browser console:
 
 ## Next Steps
 
-- [Public Files with CDN](./public-files.md) - Serve files through Cloudflare CDN
-- [Private Files with Signed URLs](./private-files.md) - Auth-controlled file access
+- [Public Files with CDN](./public-files.md) - Serve files through Cloudflare
+  CDN
+- [Private Files with Signed URLs](./private-files.md) - Auth-controlled file
+  access

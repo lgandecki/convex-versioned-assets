@@ -1,14 +1,17 @@
 # Private Files with Signed URLs
 
-This guide covers serving private files that require authentication. Users must be authorized to access these files, and URLs are time-limited.
+This guide covers serving private files that require authentication. Users must
+be authorized to access these files, and URLs are time-limited.
 
 ## Overview
 
 The private files pattern uses:
 
 - **Signed URLs**: Time-limited URLs that expire (prevents unauthorized sharing)
-- **Convex reactivity**: When a file version changes, the UI updates automatically
-- **Browser caching**: Files are cached by version, so unchanged files aren't re-downloaded
+- **Convex reactivity**: When a file version changes, the UI updates
+  automatically
+- **Browser caching**: Files are cached by version, so unchanged files aren't
+  re-downloaded
 
 ## Architecture
 
@@ -40,11 +43,14 @@ The private files pattern uses:
 
 Including the versionId in the URL provides:
 
-1. **Reactivity**: When the published version changes, Convex pushes the new versionId to your app. The URL changes, triggering a fresh fetch.
+1. **Reactivity**: When the published version changes, Convex pushes the new
+   versionId to your app. The URL changes, triggering a fresh fetch.
 
-2. **Caching**: Each versionId URL is immutable—the content never changes. Browsers can cache aggressively with `Cache-Control: immutable`.
+2. **Caching**: Each versionId URL is immutable—the content never changes.
+   Browsers can cache aggressively with `Cache-Control: immutable`.
 
-3. **Consistency**: Users in the same session see the same version, even during updates.
+3. **Consistency**: Users in the same session see the same version, even during
+   updates.
 
 ## Implementation
 
@@ -93,16 +99,19 @@ http.route({
     // await checkPermission(ctx, identity, versionId);
 
     // 4. Generate signed URL
-    const signedUrl = await ctx.runAction(components.assetManager.signedUrl.getSignedUrl, {
-      versionId: versionId as any,
-      expiresIn: 3600, // 1 hour - good for audio/video seeking
-      r2Config: {
-        R2_BUCKET: process.env.R2_BUCKET!,
-        R2_ENDPOINT: process.env.R2_ENDPOINT!,
-        R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
-        R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
+    const signedUrl = await ctx.runAction(
+      components.versionedAssets.signedUrl.getSignedUrl,
+      {
+        versionId: versionId as any,
+        expiresIn: 3600, // 1 hour - good for audio/video seeking
+        r2Config: {
+          R2_BUCKET: process.env.R2_BUCKET!,
+          R2_ENDPOINT: process.env.R2_ENDPOINT!,
+          R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
+          R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
+        },
       },
-    });
+    );
 
     if (!signedUrl) {
       return new Response("Not found", { status: 404 });
@@ -112,7 +121,10 @@ http.route({
     // (URL contains versionId, so content at this URL never changes)
     return new Response(null, {
       status: 302,
-      headers: { Location: signedUrl, "Cache-Control": "public, max-age=31536000, immutable" },
+      headers: {
+        Location: signedUrl,
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
     });
   }),
 });
@@ -134,10 +146,13 @@ export const getPrivateFile = query({
   args: { folderPath: v.string(), basename: v.string() },
   handler: async (ctx, { folderPath, basename }) => {
     // Get the published file info from the component
-    const file = await ctx.runQuery(components.assetManager.assetManager.getPublishedFile, {
-      folderPath,
-      basename,
-    });
+    const file = await ctx.runQuery(
+      components.versionedAssets.assetManager.getPublishedFile,
+      {
+        folderPath,
+        basename,
+      },
+    );
 
     if (!file) return null;
 
@@ -188,7 +203,8 @@ export function PrivateAudioPlayer({
 
 ### Step 4: Configure Fetch with Auth Headers
 
-For `<audio>`, `<video>`, or `<img>` tags to send auth headers, you need a service worker or use fetch directly:
+For `<audio>`, `<video>`, or `<img>` tags to send auth headers, you need a
+service worker or use fetch directly:
 
 ```tsx
 // Option A: Use a custom hook with blob URLs
@@ -219,7 +235,10 @@ function usePrivateFileUrl(versionId: string | undefined, path: string) {
 // Usage
 function PrivateImage({ folderPath, basename }) {
   const file = useQuery(api.files.getPrivateFile, { folderPath, basename });
-  const imageUrl = usePrivateFileUrl(file?.versionId, `${folderPath}/${basename}`);
+  const imageUrl = usePrivateFileUrl(
+    file?.versionId,
+    `${folderPath}/${basename}`,
+  );
 
   if (!imageUrl) return <div>Loading...</div>;
   return <img src={imageUrl} alt={basename} />;
@@ -234,7 +253,12 @@ function PrivateImage({ folderPath, basename }) {
 
   if (!file) return null;
 
-  return <img src={`/private/v/${file.versionId}/${folderPath}/${basename}`} alt={basename} />;
+  return (
+    <img
+      src={`/private/v/${file.versionId}/${folderPath}/${basename}`}
+      alt={basename}
+    />
+  );
 }
 ```
 
@@ -251,11 +275,14 @@ Choose expiration based on use case:
 
 ```typescript
 // In your HTTP endpoint
-const signedUrl = await ctx.runAction(components.assetManager.signedUrl.getSignedUrl, {
-  versionId,
-  expiresIn: 3600, // Adjust based on content type
-  r2Config: getR2Config(),
-});
+const signedUrl = await ctx.runAction(
+  components.versionedAssets.signedUrl.getSignedUrl,
+  {
+    versionId,
+    expiresIn: 3600, // Adjust based on content type
+    r2Config: getR2Config(),
+  },
+);
 ```
 
 ## Reactivity in Action

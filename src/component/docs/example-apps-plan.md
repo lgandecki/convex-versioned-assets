@@ -2,7 +2,9 @@
 
 ## Goal
 
-Build a suite of focused example apps that demonstrate different patterns for using the asset-manager component. Each app teaches one or two concepts clearly, making it easy to understand, test, and record videos for.
+Build a suite of focused example apps that demonstrate different patterns for
+using the asset-manager component. Each app teaches one or two concepts clearly,
+making it easy to understand, test, and record videos for.
 
 ---
 
@@ -38,8 +40,7 @@ convex-asset-manager/              # New repo or folder
 
 ### 01-basic-upload (Vite)
 
-**Concepts**: Upload flow, startUpload → finishUpload
-**Complexity**: Minimal
+**Concepts**: Upload flow, startUpload → finishUpload **Complexity**: Minimal
 **Storage**: Convex
 
 Single page with:
@@ -66,9 +67,8 @@ await finishUpload({ intentId });
 
 ### 02-public-gallery (Vite)
 
-**Concepts**: Public files, CDN URLs, listPublishedFilesInFolder
-**Complexity**: Low
-**Storage**: Convex
+**Concepts**: Public files, CDN URLs, listPublishedFilesInFolder **Complexity**:
+Low **Storage**: Convex
 
 Image gallery that:
 
@@ -82,15 +82,15 @@ const files = useQuery(api.gallery.listImages, { folder: "gallery" });
 return files.map((f) => <img src={f.url} key={f.versionId} />);
 ```
 
-**Testing**: Upload images, refresh page, check Network tab shows cached responses.
+**Testing**: Upload images, refresh page, check Network tab shows cached
+responses.
 
 ---
 
 ### 03-versioned-text (Vite)
 
 **Concepts**: Version history, published/archived states, restoreVersion
-**Complexity**: Medium
-**Storage**: Convex
+**Complexity**: Medium **Storage**: Convex
 
 Text editor with:
 
@@ -108,15 +108,15 @@ Version 2: "Hello World - Updated"
 Version 3: "Hello World - Final"
 ```
 
-**Testing**: Create versions, verify correct content loads, restore old version, verify new version created.
+**Testing**: Create versions, verify correct content loads, restore old version,
+verify new version created.
 
 ---
 
 ### 04-reactive-updates (Vite)
 
 **Concepts**: Convex reactivity, real-time updates across windows
-**Complexity**: Medium
-**Storage**: Convex
+**Complexity**: Medium **Storage**: Convex
 
 Two-panel demo:
 
@@ -124,7 +124,8 @@ Two-panel demo:
 - Right panel: "Viewer" showing current published version
 - Open in two browser windows
 
-When you upload a new version in Window A, Window B updates instantly without refresh.
+When you upload a new version in Window A, Window B updates instantly without
+refresh.
 
 ```tsx
 // Viewer just subscribes
@@ -132,15 +133,15 @@ const file = useQuery(api.files.getPublished, { path: "demo/content" });
 return <div>{file?.url && <img src={file.url} />}</div>;
 ```
 
-**Testing**: Open two windows, upload in one, watch other update. Record timestamp of updates.
+**Testing**: Open two windows, upload in one, watch other update. Record
+timestamp of updates.
 
 ---
 
 ### 05-private-files (Vite)
 
 **Concepts**: Signed URLs, HTTP endpoint, auth headers, versionId in URL
-**Complexity**: Medium-High
-**Storage**: Convex
+**Complexity**: Medium-High **Storage**: Convex
 
 User dashboard with:
 
@@ -165,8 +166,7 @@ GET /private/v/{versionId}/path/to/file
 ### 06-private-video (Vite)
 
 **Concepts**: Long TTL for video, Range requests, seeking behavior
-**Complexity**: Medium
-**Storage**: Convex (or R2 for larger files)
+**Complexity**: Medium **Storage**: Convex (or R2 for larger files)
 
 Video player demo:
 
@@ -183,15 +183,15 @@ const signedUrl = await getSignedUrl({
 });
 ```
 
-**Testing**: Upload short video, seek around, watch network requests, verify no 403 errors.
+**Testing**: Upload short video, seek around, watch network requests, verify no
+403 errors.
 
 ---
 
 ### 07-team-permissions (Vite)
 
-**Concepts**: Team-based access, permission checks in app layer
-**Complexity**: High
-**Storage**: Convex
+**Concepts**: Team-based access, permission checks in app layer **Complexity**:
+High **Storage**: Convex
 
 Multi-user app with:
 
@@ -213,7 +213,7 @@ export const getTeamFile = query({
     if (!membership) throw new Error("Not a team member");
 
     // Now safe to get signed URL
-    return await ctx.runAction(components.assetManager.signedUrl.getSignedUrl, { ... });
+    return await ctx.runAction(components.versionedAssets.signedUrl.getSignedUrl, { ... });
   }
 });
 ```
@@ -224,8 +224,7 @@ export const getTeamFile = query({
 
 ### 08-static-marketing (Next.js)
 
-**Concepts**: SSG, build-time URLs, no client-side Convex
-**Complexity**: Medium
+**Concepts**: SSG, build-time URLs, no client-side Convex **Complexity**: Medium
 **Storage**: Convex (or R2 for production scale)
 
 Marketing site with:
@@ -247,15 +246,15 @@ export default async function Page() {
 }
 ```
 
-**Testing**: Build site, verify no Convex connection in browser, images load from static URLs.
+**Testing**: Build site, verify no Convex connection in browser, images load
+from static URLs.
 
 ---
 
 ### 09-hybrid-static (Next.js)
 
 **Concepts**: SSG + client hydration, static build with live updates
-**Complexity**: Medium-High
-**Storage**: Convex
+**Complexity**: Medium-High **Storage**: Convex
 
 Marketing site that:
 
@@ -273,14 +272,14 @@ export async function generateStaticParams() { ... }
 const file = useQuery(api.marketing.getHero); // Reactive after hydration
 ```
 
-**Testing**: Build, deploy, update content in Convex, refresh page, see update without rebuild.
+**Testing**: Build, deploy, update content in Convex, refresh page, see update
+without rebuild.
 
 ---
 
 ### 10-prefetch-nextjs (Next.js)
 
-**Concepts**: RSC data fetching, client cache, streaming
-**Complexity**: High
+**Concepts**: RSC data fetching, client cache, streaming **Complexity**: High
 **Storage**: Convex
 
 Admin panel showing:
@@ -297,8 +296,7 @@ Based on existing `next-app/admin/` but cleaned up and documented.
 ### 11-prefetch-tanstack (TanStack Start)
 
 **Concepts**: Loader pattern, route prefetching, stale-while-revalidate
-**Complexity**: High
-**Storage**: Convex
+**Complexity**: High **Storage**: Convex
 
 Admin panel showing:
 
@@ -314,8 +312,7 @@ Based on existing `src/routes/admin.tsx` but cleaned up and documented.
 ### 12-r2-storage (Vite)
 
 **Concepts**: R2 backend, identical frontend code, configuration only
-**Complexity**: Low (if 02-public-gallery exists)
-**Storage**: R2
+**Complexity**: Low (if 02-public-gallery exists) **Storage**: R2
 
 **Identical to 02-public-gallery** except:
 
@@ -325,7 +322,8 @@ Based on existing `src/routes/admin.tsx` but cleaned up and documented.
 
 Demonstrates that frontend code doesn't change between backends.
 
-**Testing**: Upload same images as 02, verify URLs point to R2 domain, CDN caching works.
+**Testing**: Upload same images as 02, verify URLs point to R2 domain, CDN
+caching works.
 
 ---
 
@@ -362,9 +360,11 @@ Demonstrates that frontend code doesn't change between backends.
 
 ## Shared Code Strategy
 
-Each example has its own `convex/` folder with the component at `convex/components/asset-manager/`.
+Each example has its own `convex/` folder with the component at
+`convex/components/asset-manager/`.
 
-Linking and syncing handled separately (not part of this plan). When building examples, assume component is already in place.
+Linking and syncing handled separately (not part of this plan). When building
+examples, assume component is already in place.
 
 ---
 
@@ -418,15 +418,21 @@ Each example gets a short video (2-5 min):
 
 ## Decisions Made
 
-- **Auth**: Use Convex Auth for examples 05-07 (Clerk will be shown in a separate large app)
-- **Structure**: Separate folders per demo-app, each with its own `convex/` folder containing the component at `convex/components/asset-manager/`
-- **Workflow**: Build all examples first, polish, then record videos from scratch
-- **Admin Panel**: Show integration as a route in Next.js/TanStack/Vite (could become a package later)
+- **Auth**: Use Convex Auth for examples 05-07 (Clerk will be shown in a
+  separate large app)
+- **Structure**: Separate folders per demo-app, each with its own `convex/`
+  folder containing the component at `convex/components/asset-manager/`
+- **Workflow**: Build all examples first, polish, then record videos from
+  scratch
+- **Admin Panel**: Show integration as a route in Next.js/TanStack/Vite (could
+  become a package later)
 
 ---
 
 ## Notes
 
-- Component linking handled separately - assume component exists at `convex/components/asset-manager/`
-- Later: Replace local component with npm package + update imports via AST tooling
+- Component linking handled separately - assume component exists at
+  `convex/components/asset-manager/`
+- Later: Replace local component with npm package + update imports via AST
+  tooling
 - Later: Prepare prompts + AGENT.md for automated building of these examples
