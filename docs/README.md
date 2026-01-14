@@ -4,6 +4,7 @@ A Convex component for managing **versioned assets** with full history,
 automatic CDN delivery, and real-time sync.
 
 [![npm version](https://badge.fury.io/js/convex-versioned-assets.svg)](https://badge.fury.io/js/convex-versioned-assets)
+[![docs](https://img.shields.io/badge/docs-online-blue)](https://lgandecki.github.io/convex-versioned-assets/)
 
 ## Used In Production
 
@@ -331,14 +332,16 @@ const { intentId, uploadUrl } = await ctx.runMutation(
 );
 ```
 
-See the [detailed R2 setup guide](./docs/setup-r2.md) for
-step-by-step instructions including CORS configuration, custom domains, and
-troubleshooting.
+See the [detailed R2 setup guide](./docs/setup-r2.md) for step-by-step
+instructions including CORS configuration, custom domains, and troubleshooting.
 
 ## Documentation
 
-| Guide                                                                 | Description                                     |
-| --------------------------------------------------------------------- | ----------------------------------------------- |
+📖
+**[Full documentation](https://lgandecki.github.io/convex-versioned-assets/)**
+
+| Guide                                                   | Description                                     |
+| ------------------------------------------------------- | ----------------------------------------------- |
 | [Setting Up R2](./docs/setup-r2.md)                     | Configure Cloudflare R2 bucket, CORS, domains   |
 | [Public Files](./docs/public-files.md)                  | Serve files through Cloudflare CDN              |
 | [Private Files](./docs/private-files.md)                | Auth-protected access with signed URLs          |
