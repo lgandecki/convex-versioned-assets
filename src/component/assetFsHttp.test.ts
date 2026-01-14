@@ -51,7 +51,9 @@ describe("getVersionPreviewUrl (admin preview - any version state)", () => {
     expect(archivedV1?.state).toBe("archived");
 
     // v1 is archived - but admin preview should still return URL
-    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, { versionId: v1.versionId });
+    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, {
+      versionId: v1.versionId,
+    });
 
     expect(result).not.toBeNull();
     expect(result?.url).toBeDefined();
@@ -62,18 +64,26 @@ describe("getVersionPreviewUrl (admin preview - any version state)", () => {
   it("returns URL for published versions", async () => {
     const t = convexTest(schema, modules);
 
-    const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-      size: 100,
-      contentType: "text/plain",
-    });
+    const storageId = await t.action(
+      internal._testInsertFakeFile._testStoreFakeFile,
+      {
+        size: 100,
+        contentType: "text/plain",
+      },
+    );
 
-    const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-      folderPath: "",
-      basename: "published-preview.txt",
-      storageId,
-    });
+    const { versionId } = await t.mutation(
+      api.assetManager.createVersionFromStorageId,
+      {
+        folderPath: "",
+        basename: "published-preview.txt",
+        storageId,
+      },
+    );
 
-    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, { versionId });
+    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, {
+      versionId,
+    });
 
     expect(result).not.toBeNull();
     expect(result?.url).toBeDefined();
@@ -89,7 +99,9 @@ describe("getVersionPreviewUrl (admin preview - any version state)", () => {
       basename: "no-storage.txt",
     });
 
-    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, { versionId });
+    const result = await t.query(api.assetFsHttp.getVersionPreviewUrl, {
+      versionId,
+    });
 
     // Should return null because there's no storageId
     expect(result).toBeNull();
@@ -102,14 +114,20 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
       const t = convexTest(schema, modules);
 
       // Create two versions - the first will be archived when second is published
-      const s1 = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 100,
-        contentType: "text/plain",
-      });
-      const s2 = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 200,
-        contentType: "text/plain",
-      });
+      const s1 = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 100,
+          contentType: "text/plain",
+        },
+      );
+      const s2 = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 200,
+          contentType: "text/plain",
+        },
+      );
 
       const v1 = await t.mutation(api.assetManager.createVersionFromStorageId, {
         folderPath: "",
@@ -136,18 +154,26 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
     it("serves published versions", async () => {
       const t = convexTest(schema, modules);
 
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 100,
-        contentType: "application/json",
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 100,
+          contentType: "application/json",
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "api",
-        basename: "config.json",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "api",
+          basename: "config.json",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       expect(result).not.toBeNull();
       expect(result?.storageId).toEqual(storageId);
@@ -162,7 +188,9 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
         basename: "no-file.txt",
       });
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       expect(result).toBeNull();
     });
@@ -173,18 +201,26 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
       const t = convexTest(schema, modules);
 
       // Create a small file (100 bytes, well under 20MB limit)
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 100,
-        contentType: "image/png",
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 100,
+          contentType: "image/png",
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "images",
-        basename: "icon.png",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "images",
+          basename: "icon.png",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       // Small files return blob response for direct serving
       expect(result?.kind).toBe("blob");
@@ -201,18 +237,26 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
 
       // Create a large file (25MB, over 20MB limit)
       const largeSize = 25 * 1024 * 1024; // 25MB
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: largeSize,
-        contentType: "video/mp4",
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: largeSize,
+          contentType: "video/mp4",
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "videos",
-        basename: "intro.mp4",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "videos",
+          basename: "intro.mp4",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       // Large files return redirect to storage URL
       expect(result?.kind).toBe("redirect");
@@ -229,18 +273,26 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
 
       // Exactly 20MB - should be treated as small
       const exactLimit = 20 * 1024 * 1024;
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: exactLimit,
-        contentType: "application/zip",
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: exactLimit,
+          contentType: "application/zip",
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "archives",
-        basename: "data.zip",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "archives",
+          basename: "data.zip",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       expect(result?.kind).toBe("blob");
     });
@@ -250,20 +302,112 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
 
       // Just over 20MB - should be treated as large
       const justOver = 20 * 1024 * 1024 + 1;
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: justOver,
-        contentType: "application/zip",
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: justOver,
+          contentType: "application/zip",
+        },
+      );
+
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "archives",
+          basename: "big-data.zip",
+          storageId,
+        },
+      );
+
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
       });
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "archives",
-        basename: "big-data.zip",
+      expect(result?.kind).toBe("redirect");
+    });
+  });
+
+  describe("getPublishedFileForServing - lookup by path", () => {
+    it("returns serving info for published file by path", async () => {
+      const t = convexTest(schema, modules);
+
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 100,
+          contentType: "image/png",
+        },
+      );
+
+      await t.mutation(api.assetManager.createVersionFromStorageId, {
+        folderPath: "images",
+        basename: "logo.png",
         storageId,
       });
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getPublishedFileForServing, {
+        folderPath: "images",
+        basename: "logo.png",
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.kind).toBe("blob");
+      expect(result?.storageId).toEqual(storageId);
+    });
+
+    it("returns null for non-existent path", async () => {
+      const t = convexTest(schema, modules);
+
+      const result = await t.query(api.assetFsHttp.getPublishedFileForServing, {
+        folderPath: "does-not",
+        basename: "exist.txt",
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null for asset without published version", async () => {
+      const t = convexTest(schema, modules);
+
+      // Create asset with commitVersion (no storage, no published version pointer)
+      await t.mutation(api.assetManager.commitVersion, {
+        folderPath: "drafts",
+        basename: "unpublished.txt",
+      });
+
+      const result = await t.query(api.assetFsHttp.getPublishedFileForServing, {
+        folderPath: "drafts",
+        basename: "unpublished.txt",
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it("large files are served via redirect", async () => {
+      const t = convexTest(schema, modules);
+
+      const largeSize = 25 * 1024 * 1024; // 25MB
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: largeSize,
+          contentType: "video/mp4",
+        },
+      );
+
+      await t.mutation(api.assetManager.createVersionFromStorageId, {
+        folderPath: "videos",
+        basename: "large.mp4",
+        storageId,
+      });
+
+      const result = await t.query(api.assetFsHttp.getPublishedFileForServing, {
+        folderPath: "videos",
+        basename: "large.mp4",
+      });
 
       expect(result?.kind).toBe("redirect");
+      expect(result?.location).toBeDefined();
     });
   });
 
@@ -271,18 +415,26 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
     it("always includes a content type in the response", async () => {
       const t = convexTest(schema, modules);
 
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 500,
-        contentType: "application/pdf",
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 500,
+          contentType: "application/pdf",
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "docs",
-        basename: "report.pdf",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "docs",
+          basename: "report.pdf",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       expect(result?.kind).toBe("blob");
       // Content type is always present (from storage metadata or defaults to octet-stream)
@@ -294,17 +446,25 @@ describe("getVersionForServing (HTTP file serving logic)", () => {
       const t = convexTest(schema, modules);
 
       // Create file - storage may or may not preserve contentType
-      const storageId = await t.action(internal._testInsertFakeFile._testStoreFakeFile, {
-        size: 100,
-      });
+      const storageId = await t.action(
+        internal._testInsertFakeFile._testStoreFakeFile,
+        {
+          size: 100,
+        },
+      );
 
-      const { versionId } = await t.mutation(api.assetManager.createVersionFromStorageId, {
-        folderPath: "misc",
-        basename: "unknown.bin",
-        storageId,
-      });
+      const { versionId } = await t.mutation(
+        api.assetManager.createVersionFromStorageId,
+        {
+          folderPath: "misc",
+          basename: "unknown.bin",
+          storageId,
+        },
+      );
 
-      const result = await t.query(api.assetFsHttp.getVersionForServing, { versionId });
+      const result = await t.query(api.assetFsHttp.getVersionForServing, {
+        versionId,
+      });
 
       expect(result?.kind).toBe("blob");
       // Falls back to octet-stream when no contentType is available
