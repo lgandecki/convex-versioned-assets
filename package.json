@@ -87,6 +87,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.0.17",
     "chokidar-cli": "3.0.0",
     "convex": "1.31.0",
     "convex-test": "0.0.40",

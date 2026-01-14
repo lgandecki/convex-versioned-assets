@@ -5,6 +5,7 @@ automatic CDN delivery, and real-time sync.
 
 [![npm version](https://badge.fury.io/js/convex-versioned-assets.svg)](https://badge.fury.io/js/convex-versioned-assets)
 [![docs](https://img.shields.io/badge/docs-online-blue)](https://lgandecki.github.io/convex-versioned-assets/)
+[![codecov](https://codecov.io/gh/lgandecki/convex-versioned-assets/graph/badge.svg)](https://codecov.io/gh/lgandecki/convex-versioned-assets)
 
 ## Used In Production
 
