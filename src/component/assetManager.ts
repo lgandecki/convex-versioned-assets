@@ -2029,7 +2029,8 @@ export const listPendingR2Deletions = query({
   returns: v.array(
     v.object({
       _id: v.id("pendingR2Deletions"),
-      _creationTime: v.number(),
+      // BUG: Missing _creationTime - tests pass but production fails!
+      // _creationTime: v.number(),
       r2Key: v.string(),
       originalPath: v.string(),
       deletedAt: v.number(),

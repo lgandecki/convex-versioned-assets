@@ -446,7 +446,6 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         { limit?: number; onlyExpired?: boolean },
         Array<{
-          _creationTime: number;
           _id: string;
           deleteAfter: number;
           deletedAt: number;
