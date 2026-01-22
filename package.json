@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/lgandecki/convex-versioned-assets/issues"
   },
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "keywords": [
     "convex",
@@ -69,17 +69,40 @@
     "./convex.config": {
       "types": "./dist/component/convex.config.d.ts",
       "default": "./dist/component/convex.config.js"
-    }
+    },
+    "./admin-ui": {
+      "types": "./dist/admin-ui/index.d.ts",
+      "default": "./dist/admin-ui/index.js"
+    },
+    "./admin-ui/styles": "./dist/admin-ui/styles/admin.css"
   },
   "dependencies": {
-    "@convex-dev/r2": "^0.8.1"
+    "@convex-dev/r2": "^0.8.1",
+    "ts-morph": "^24.0.0"
   },
   "peerDependencies": {
     "convex": "^1.29.3",
     "react": "^18.3.1 || ^19.0.0"
   },
   "devDependencies": {
+    "@convex-dev/react-query": "^0.1.0",
     "@convex-dev/eslint-plugin": "^1.1.1",
+    "@radix-ui/react-context-menu": "^2.2.16",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-query": "^5.77.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.512.0",
+    "react-resizable-panels": "^4.0.13",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.3.0",
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "9.39.1",
@@ -109,5 +132,8 @@
     "vitest": "4.0.17"
   },
   "types": "./dist/client/index.d.ts",
-  "module": "./dist/client/index.js"
+  "module": "./dist/client/index.js",
+  "bin": {
+    "convex-versioned-assets": "./dist/setup/index.js"
+  }
 }

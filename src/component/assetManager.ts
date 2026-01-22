@@ -511,7 +511,7 @@ function joinPath(parent: string, segment: string): string {
 
 export const createFolderByName = mutation({
   args: { parentPath: v.string(), name: v.string() },
-  returns: v.id("folders"),
+  returns: v.string(), // Returns the folder path, not the ID
   handler: async (ctx, args) => {
     const normalizedParentPath = normalizeFolderPath(args.parentPath);
     const slugifiedName = slugify(args.name);
@@ -539,7 +539,7 @@ export const createFolderByName = mutation({
 
     const now = Date.now();
     const actorFields = await getActorFields(ctx);
-    const id = await ctx.db.insert("folders", {
+    await ctx.db.insert("folders", {
       path: newFolderPath,
       name: args.name,
       createdAt: now,
@@ -552,7 +552,7 @@ export const createFolderByName = mutation({
       performedBy: actorFields.createdBy,
     });
 
-    return id;
+    return newFolderPath;
   },
 });
 
