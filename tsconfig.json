@@ -13,8 +13,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
 
-    "composite": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "isolatedModules": true,
     "declaration": true,
     "declarationMap": true,
