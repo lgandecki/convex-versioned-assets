@@ -356,7 +356,8 @@ export const createFolderByPath = mutation({
       .first();
 
     if (existing) {
-      throw new Error("Folder already exists");
+      // Folder already exists, just return its ID
+      return existing._id;
     }
 
     const now = Date.now();

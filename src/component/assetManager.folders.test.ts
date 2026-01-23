@@ -342,14 +342,17 @@ test("does not return children from folders with dots in names", async () => {
   expect(folders[0].path).toBe("test/child");
 });
 
-test("createFolderByPath throws when same path already exist", async () => {
+test("createFolderByPath is idempotent - returns existing folder ID if path exists", async () => {
   const t = convexTest(schema, modules);
 
-  await t.mutation(api.assetManager.createFolderByPath, { path: "kanban" });
+  const id1 = await t.mutation(api.assetManager.createFolderByPath, {
+    path: "kanban",
+  });
+  const id2 = await t.mutation(api.assetManager.createFolderByPath, {
+    path: "kanban",
+  });
 
-  await expect(
-    t.mutation(api.assetManager.createFolderByPath, { path: "kanban" }),
-  ).rejects.toThrow(/already exists/i);
+  expect(id1).toEqual(id2);
 });
 
 test("updateFolder throws when folder does not exist", async () => {
