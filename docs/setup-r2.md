@@ -18,11 +18,11 @@ bucket so you can share a bucket with multiple apps if needed. Very handy!
 
 ```bash
 R2_KEY_PREFIX=your-app-name
-R2_BUCKET=your-bucket-name
-R2_PUBLIC_URL=https://assets.yourdomain.com
-R2_ACCESS_KEY_ID=your-access-key-id
-R2_SECRET_ACCESS_KEY=your-secret-access-key
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_BUCKET=
+R2_PUBLIC_URL=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_ENDPOINT=
 ```
 
 ## Step 1: Create an R2 Bucket
