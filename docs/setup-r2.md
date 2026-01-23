@@ -16,7 +16,7 @@ go.
 hint: You can already set the R2_KEY_PREFIX to namespace your files in the
 bucket so you can share a bucket with multiple apps if needed. Very handy!
 
-```
+```bash
 R2_KEY_PREFIX=your-app-name
 R2_BUCKET=your-bucket-name
 R2_PUBLIC_URL=https://assets.yourdomain.com
