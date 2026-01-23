@@ -587,6 +587,11 @@ export const startUpload = authedMutation({
     r2Key: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    // Auto-create folder if it doesn't exist
+    await ctx.runMutation(components.versionedAssets.assetManager.createFolderByPath, {
+      path: args.folderPath,
+    });
+
     const result = await ctx.runMutation(components.versionedAssets.assetManager.startUpload, {
       ...args,
       r2Config: getR2Config(),
@@ -1713,7 +1718,7 @@ function LogoutButton() {
 }
 
 export function AssetDemo() {
-  const folderPath = "/";
+  const folderPath = "demo";
   const basename = "hero-image.jpg";
   return (
     <div className="asset-demo-container">
