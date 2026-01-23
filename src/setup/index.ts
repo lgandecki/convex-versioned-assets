@@ -17,6 +17,7 @@ import {
   logInfo,
   prompt,
   confirm,
+  isGitRepo,
   isGitClean,
   directoryExists,
   fileExists,
@@ -165,8 +166,27 @@ ${colors.bright}convex-versioned-assets Setup${colors.reset}
 async function step1PreflightChecks(state: SetupState): Promise<void> {
   logStep(1, TOTAL_STEPS, "Pre-flight checks");
 
-  // Check git status (optional warning)
-  if (!isGitClean()) {
+  // Check if git is initialized
+  if (!isGitRepo()) {
+    logWarning("No git repository detected.");
+    const initGit = await confirm(
+      "Initialize git and commit current state? (Recommended - lets you see what setup changed)",
+      true,
+    );
+
+    if (initGit) {
+      logInfo("Initializing git repository...");
+      runCommand("git init");
+      runCommand("git add .");
+      runCommand(
+        'git commit -m "Initial state before convex-versioned-assets setup"',
+      );
+      logSuccess(
+        "Created initial commit - you can use 'git diff' after setup to see changes",
+      );
+    }
+  } else if (!isGitClean()) {
+    // Existing logic for dirty working tree
     logWarning("Git working tree is not clean.");
     const proceed = await confirm("Continue anyway?", false);
     if (!proceed) {
@@ -692,6 +712,9 @@ async function setupWithRouting(state: SetupState): Promise<void> {
   if (result.steps.routes) {
     logSuccess("Created src/routes/ with __root.tsx, index.tsx, admin.tsx");
   }
+  if (result.steps.components) {
+    logSuccess("Created src/components/ with AssetDemo.tsx and AssetDemo.css");
+  }
   if (result.steps.viteConfig) {
     logSuccess("Added TanStack Router plugin to vite.config.ts");
   }
@@ -702,7 +725,7 @@ async function setupWithRouting(state: SetupState): Promise<void> {
     logSuccess("Added routeTree.gen.ts to .gitignore");
   }
 
-  logInfo("Routes created: / (your app) and /admin (admin panel)");
+  logInfo("Routes created: / (demo) and /admin (admin panel)");
 }
 
 /**

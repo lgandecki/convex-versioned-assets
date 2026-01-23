@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { components } from "./_generated/api";
-import { adminMutation, publicAction } from "./functions";
+import { authedMutation, publicAction } from "./functions";
 /**
  * Get R2 config from env vars. Returns undefined if not configured.
  * Called once per request, passed to component functions.
@@ -36,7 +36,7 @@ const storageBackendValidator = v.union(v.literal("convex"), v.literal("r2"));
  * 2. Upload file to the URL
  * 3. Call finishUpload() with intentId (+ storageId for Convex backend)
  */
-export const startUpload = adminMutation({
+export const startUpload = authedMutation({
     args: {
         folderPath: v.string(),
         basename: v.string(),
@@ -81,7 +81,7 @@ export const startUploadInternal = internalMutation({
 /**
  * Finish an upload. Creates the asset version from a completed upload intent.
  */
-export const finishUpload = adminMutation({
+export const finishUpload = authedMutation({
     args: {
         intentId: v.string(),
         uploadResponse: v.optional(v.any()),

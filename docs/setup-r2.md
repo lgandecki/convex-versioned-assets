@@ -87,8 +87,8 @@ R2_PUBLIC_URL=https://assets.yourdomain.com
 R2_ACCESS_KEY_ID=your-access-key-id
 R2_SECRET_ACCESS_KEY=your-secret-access-key
 R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-
-# Optional: Prefix for namespacing files in shared buckets
+# Optional but recommended: Prefix for namespacing files in shared buckets 
+# - you will be able to create multiple apps using the same bucket
 # R2_KEY_PREFIX=my-app
 ```
 
@@ -108,7 +108,7 @@ npx convex-versioned-assets r2setup
 
 This command will:
 
-1. Read R2 variables from your `.env.local` (or `.env`)
+1. Read R2 variables from your `.env.local`
 2. Validate that all required variables are present
 3. Push them to Convex environment variables
 
@@ -172,24 +172,6 @@ for (const version of versions) {
       r2Config: getR2Config(),
     },
   );
-}
-```
-
-### Option 3: Backfill r2PublicUrl for existing R2 files
-
-If you already have files in R2 but they don't have the `r2PublicUrl` stored on
-each version (uploaded before this feature), run the backfill:
-
-```typescript
-// Run until done
-let isDone = false;
-while (!isDone) {
-  const result = await ctx.runAction(
-    components.versionedAssets.migration.backfillR2PublicUrlAction,
-    { batchSize: 50 },
-  );
-  console.log(`Updated ${result.updated} of ${result.total} versions`);
-  isDone = result.isDone;
 }
 ```
 
