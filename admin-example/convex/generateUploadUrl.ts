@@ -53,6 +53,12 @@ export const startUpload = authedMutation({
     r2Key: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    // Auto-create folder if it doesn't exist
+    await ctx.runMutation(
+      components.versionedAssets.assetManager.createFolderByPath,
+      { path: args.folderPath },
+    );
+
     const result = await ctx.runMutation(
       components.versionedAssets.assetManager.startUpload,
       {
