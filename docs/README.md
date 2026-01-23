@@ -11,8 +11,8 @@ automatic CDN delivery, and real-time sync.
 
 This component powers the asset management system at
 [BookGenius](https://bookgenius.net)
-([GitHub](https://github.com/TheBrainFamily/bookgenius)), an interactive ebook
-platform with AI-powered content.
+([GitHub](https://github.com/TheBrainFamily/BookgeniusPlayer)), an interactive
+ebook platform with AI-powered content.
 
 ## Why This Component?
 
