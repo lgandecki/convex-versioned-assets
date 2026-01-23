@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/lgandecki/convex-versioned-assets/issues"
   },
-  "version": "1.0.3",
+  "version": "1.0.4",
   "license": "Apache-2.0",
   "keywords": [
     "convex",
