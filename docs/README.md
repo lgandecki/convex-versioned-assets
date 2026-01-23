@@ -7,6 +7,12 @@ automatic CDN delivery, and real-time sync.
 [![docs](https://img.shields.io/badge/docs-online-blue)](https://lgandecki.github.io/convex-versioned-assets/)
 [![codecov](https://codecov.io/gh/lgandecki/convex-versioned-assets/graph/badge.svg)](https://codecov.io/gh/lgandecki/convex-versioned-assets)
 
+## 📺 Video Walkthrough
+
+[![Watch the video](https://img.youtube.com/vi/gDWI8LOCVns/maxresdefault.jpg)](https://youtu.be/gDWI8LOCVns)
+
+> Click to watch a full walkthrough of convex-versioned-assets in action.
+
 ## Used In Production
 
 This component powers the asset management system at
@@ -57,13 +63,42 @@ Can't restore v1             Restore v1 anytime
 
 ## Quick Start
 
-### Installation
+### Automated Setup (Recommended)
+
+The fastest way to get started is with our setup CLI:
 
 ```bash
-npm install convex-versioned-assets
+# 1. Create a Convex project with auth
+bun create convex@latest
+
+# 2. Install the package
+bun add convex-versioned-assets
+
+# 3. Run setup
+npx convex-versioned-assets setup
 ```
 
-### Configuration
+The setup wizard will:
+
+- ✅ Create all required Convex files (authz, functions, versionedAssets,
+  generateUploadUrl)
+- ✅ Configure http.ts with asset routes
+- ✅ Set up environment variables (CONVEX_ADMIN_KEY, ADMIN_EMAILS)
+- ✅ Install admin UI dependencies
+- ✅ Optionally set up TanStack Router with `/admin` route
+
+After setup, run `bun dev` and navigate to `/admin` to see the admin panel.
+
+📖 **[Full setup guide](./quick-start.md)** with all options and
+troubleshooting.
+
+### Manual Setup
+
+If you prefer manual configuration:
+
+```bash
+bun install convex-versioned-assets
+```
 
 ```typescript
 // convex/convex.config.ts
@@ -341,13 +376,14 @@ instructions including CORS configuration, custom domains, and troubleshooting.
 📖
 **[Full documentation](https://lgandecki.github.io/convex-versioned-assets/)**
 
-| Guide                                                   | Description                                     |
-| ------------------------------------------------------- | ----------------------------------------------- |
-| [Setting Up R2](./docs/setup-r2.md)                     | Configure Cloudflare R2 bucket, CORS, domains   |
-| [Public Files](./docs/public-files.md)                  | Serve files through Cloudflare CDN              |
-| [Private Files](./docs/private-files.md)                | Auth-protected access with signed URLs          |
-| [WebP via Cloudflare](./docs/webp-cloudflare-worker.md) | High-performance image conversion via CF Worker |
-| [WebP in Convex](./docs/webp-pure-convex.md)            | Convert images to WebP in Convex actions        |
+| Guide                                              | Description                                     |
+| -------------------------------------------------- | ----------------------------------------------- |
+| [Quick Start](./quick-start.md)                    | Setup CLI guide with all options                |
+| [Setting Up R2](./setup-r2.md)                     | Configure Cloudflare R2 bucket, CORS, domains   |
+| [Public Files](./public-files.md)                  | Serve files through Cloudflare CDN              |
+| [Private Files](./private-files.md)                | Auth-protected access with signed URLs          |
+| [WebP via Cloudflare](./webp-cloudflare-worker.md) | High-performance image conversion via CF Worker |
+| [WebP in Convex](./webp-pure-convex.md)            | Convert images to WebP in Convex actions        |
 
 ## API Reference
 

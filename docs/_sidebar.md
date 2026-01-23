@@ -1,5 +1,6 @@
 - **Getting Started**
   - [Introduction](README.md)
+  - [Quick Start (Setup CLI)](quick-start.md)
 
 - **Guides**
   - [Setting Up R2](setup-r2.md)
