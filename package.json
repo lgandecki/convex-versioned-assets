@@ -24,7 +24,7 @@
     "dev:frontend": "cd example && vite --clearScreen false",
     "dev:build": "chokidar 'tsconfig*.json' 'src/**/*.ts' -i '**/*.test.ts' -c 'npm run build:codegen' --initial",
     "predev": "path-exists .env.local dist || (npm run build && convex dev --once)",
-    "build": "tsc --project ./tsconfig.build.json && cd admin-example && bun install && cd .. && tsc --project ./tsconfig.admin-ui.json && tsc-alias -p ./tsconfig.admin-ui.json && mkdir -p dist/admin-ui/styles && cp admin-example/src/admin-ui/styles/admin.css dist/admin-ui/styles/ && cp admin-example/src/admin-ui/styles.d.ts dist/admin-ui/",
+    "build": "tsc --project ./tsconfig.build.json && cd admin-example && bun install --ignore-scripts && cd .. && tsc --project ./tsconfig.admin-ui.json && tsc-alias -p ./tsconfig.admin-ui.json && mkdir -p dist/admin-ui/styles && cp admin-example/src/admin-ui/styles/admin.css dist/admin-ui/styles/ && cp admin-example/src/admin-ui/styles.d.ts dist/admin-ui/",
     "build:codegen": "npx convex codegen --component-dir ./src/component && npm run build",
     "build:clean": "rm -rf dist *.tsbuildinfo && npm run build:codegen",
     "typecheck": "tsc --noEmit && tsc -p example && tsc -p example/convex",
