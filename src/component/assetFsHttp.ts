@@ -1,26 +1,20 @@
 // convex/assetFsHttp.ts
-import { action, internalQuery, query, type QueryCtx } from "./_generated/server";
+import { action, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { type Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 
 /**
- * Get the R2 public URL from storage config.
- * Requires r2PublicUrl to be configured (no fallback to signed URLs).
+ * Get the full R2 public URL for a version.
+ * Uses r2PublicUrl stored on the version at upload time.
  */
-async function getR2PublicUrl(ctx: QueryCtx, r2Key: string): Promise<string | null> {
-  const config = await ctx.db
-    .query("storageConfig")
-    .withIndex("by_singleton", (q) => q.eq("singleton", "storageConfig"))
-    .first();
-
-  if (!config?.r2PublicUrl) {
-    console.error("R2 public URL not configured. Call configureStorageBackend with r2PublicUrl.");
-    return null;
-  }
-
-  const baseUrl = config.r2PublicUrl.replace(/\/+$/, "");
-  return `${baseUrl}/${r2Key}`;
+function getR2PublicUrl(version: {
+  r2Key?: string;
+  r2PublicUrl?: string;
+}): string | null {
+  if (!version.r2Key || !version.r2PublicUrl) return null;
+  const baseUrl = version.r2PublicUrl.replace(/\/+$/, "");
+  return `${baseUrl}/${version.r2Key}`;
 }
 
 /**
@@ -66,7 +60,7 @@ export const getVersionPreviewUrl = query({
 
     let url: string | null = null;
     if (version.r2Key) {
-      url = await getR2PublicUrl(ctx, version.r2Key);
+      url = getR2PublicUrl(version);
     } else if (version.storageId) {
       url = await ctx.storage.getUrl(version.storageId);
     }
@@ -116,7 +110,7 @@ export const getVersionForServing = query({
 
     // R2 storage: redirect to public URL (Cloudflare CDN handles caching)
     if (version.r2Key) {
-      const url = await getR2PublicUrl(ctx, version.r2Key);
+      const url = getR2PublicUrl(version);
       if (!url) return null;
 
       return {
@@ -142,7 +136,11 @@ export const getVersionForServing = query({
     const url = await ctx.storage.getUrl(version.storageId!);
     if (!url) return null;
 
-    return { kind: "redirect" as const, location: url, cacheControl: "public, max-age=60" };
+    return {
+      kind: "redirect" as const,
+      location: url,
+      cacheControl: "public, max-age=60",
+    };
   },
 });
 
@@ -234,7 +232,7 @@ export const getPublishedFileForServing = query({
 
     // R2 storage: redirect to public URL (Cloudflare CDN handles caching)
     if (version.r2Key) {
-      const url = await getR2PublicUrl(ctx, version.r2Key);
+      const url = getR2PublicUrl(version);
       if (!url) return null;
 
       return {
@@ -259,7 +257,11 @@ export const getPublishedFileForServing = query({
     const url = await ctx.storage.getUrl(version.storageId!);
     if (!url) return null;
 
-    return { kind: "redirect" as const, location: url, cacheControl: "public, max-age=60" };
+    return {
+      kind: "redirect" as const,
+      location: url,
+      cacheControl: "public, max-age=60",
+    };
   },
 });
 
@@ -286,14 +288,19 @@ export const getTextContent = action({
   ),
   handler: async (ctx, { versionId }): Promise<TextContentResult> => {
     // Get version info
-    const versionInfo = await ctx.runQuery(internal.assetFsHttp.getVersionInfo, { versionId });
+    const versionInfo = await ctx.runQuery(
+      internal.assetFsHttp.getVersionInfo,
+      { versionId },
+    );
     if (!versionInfo) return null;
 
     let content: string | null = null;
 
     if (versionInfo.storageId) {
       // Convex storage: get blob directly
-      const storageBlob = await ctx.storage.get(versionInfo.storageId as Id<"_storage">);
+      const storageBlob = await ctx.storage.get(
+        versionInfo.storageId as Id<"_storage">,
+      );
       if (!storageBlob) return null;
       content = await storageBlob.text();
     } else if (versionInfo.url) {
@@ -336,10 +343,14 @@ export const getVersionInfo = internalQuery({
 
     let url: string | undefined;
     if (version.r2Key) {
-      const r2Url = await getR2PublicUrl(ctx, version.r2Key);
+      const r2Url = getR2PublicUrl(version);
       if (r2Url) url = r2Url;
     }
 
-    return { storageId: version.storageId, url, contentType: version.contentType };
+    return {
+      storageId: version.storageId,
+      url,
+      contentType: version.contentType,
+    };
   },
 });

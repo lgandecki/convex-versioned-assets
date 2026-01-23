@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/lgandecki/convex-versioned-assets/issues"
   },
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "keywords": [
     "convex",
@@ -24,7 +24,7 @@
     "dev:frontend": "cd example && vite --clearScreen false",
     "dev:build": "chokidar 'tsconfig*.json' 'src/**/*.ts' -i '**/*.test.ts' -c 'npm run build:codegen' --initial",
     "predev": "path-exists .env.local dist || (npm run build && convex dev --once)",
-    "build": "tsc --project ./tsconfig.build.json",
+    "build": "tsc --project ./tsconfig.build.json && cd admin-example && bun install --ignore-scripts && cd .. && tsc --project ./tsconfig.admin-ui.json && tsc-alias -p ./tsconfig.admin-ui.json && mkdir -p dist/admin-ui/styles && cp admin-example/src/admin-ui/styles/admin.css dist/admin-ui/styles/ && cp admin-example/src/admin-ui/styles.d.ts dist/admin-ui/",
     "build:codegen": "npx convex codegen --component-dir ./src/component && npm run build",
     "build:clean": "rm -rf dist *.tsbuildinfo && npm run build:codegen",
     "typecheck": "tsc --noEmit && tsc -p example && tsc -p example/convex",
@@ -43,7 +43,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "admin-example/src/admin-ui"
   ],
   "exports": {
     "./package.json": "./package.json",
@@ -69,45 +70,163 @@
     "./convex.config": {
       "types": "./dist/component/convex.config.d.ts",
       "default": "./dist/component/convex.config.js"
+    },
+    "./admin-ui": {
+      "types": "./dist/admin-ui/index.d.ts",
+      "default": "./dist/admin-ui/index.js"
+    },
+    "./admin-ui/styles": {
+      "types": "./dist/admin-ui/styles.d.ts",
+      "default": "./dist/admin-ui/styles/admin.css"
     }
   },
   "dependencies": {
-    "@convex-dev/r2": "^0.8.1"
+    "@convex-dev/r2": "^0.8.1",
+    "ts-morph": "^24.0.0"
   },
   "peerDependencies": {
     "convex": "^1.29.3",
-    "react": "^18.3.1 || ^19.0.0"
+    "react": "^18.3.1 || ^19.0.0",
+    "@convex-dev/auth": "^0.0.82",
+    "@convex-dev/react-query": "^0.1.0",
+    "@radix-ui/react-context-menu": "^2.2.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-scroll-area": "^1.2.0",
+    "@radix-ui/react-slot": "^1.2.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.2.0",
+    "@tanstack/react-query": "^5.0.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "date-fns": "^4.0.0",
+    "lucide-react": "^0.400.0",
+    "prism-react-renderer": "^2.0.0",
+    "react-resizable-panels": "^2.0.0 || ^3.0.0 || ^4.0.0",
+    "sonner": "^1.0.0 || ^2.0.0",
+    "tailwind-merge": "^2.0.0 || ^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@convex-dev/auth": {
+      "optional": true
+    },
+    "@convex-dev/react-query": {
+      "optional": true
+    },
+    "@radix-ui/react-context-menu": {
+      "optional": true
+    },
+    "@radix-ui/react-dialog": {
+      "optional": true
+    },
+    "@radix-ui/react-dropdown-menu": {
+      "optional": true
+    },
+    "@radix-ui/react-label": {
+      "optional": true
+    },
+    "@radix-ui/react-scroll-area": {
+      "optional": true
+    },
+    "@radix-ui/react-slot": {
+      "optional": true
+    },
+    "@radix-ui/react-switch": {
+      "optional": true
+    },
+    "@radix-ui/react-tabs": {
+      "optional": true
+    },
+    "@radix-ui/react-tooltip": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "class-variance-authority": {
+      "optional": true
+    },
+    "clsx": {
+      "optional": true
+    },
+    "date-fns": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "prism-react-renderer": {
+      "optional": true
+    },
+    "react-resizable-panels": {
+      "optional": true
+    },
+    "sonner": {
+      "optional": true
+    },
+    "tailwind-merge": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@convex-dev/auth": "^0.0.82",
     "@convex-dev/eslint-plugin": "^1.1.1",
+    "@convex-dev/react-query": "^0.1.0",
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "9.39.1",
+    "@radix-ui/react-context-menu": "^2.2.16",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.1.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-query": "^5.77.2",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.17",
     "chokidar-cli": "3.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "convex": "1.31.0",
     "convex-test": "0.0.40",
     "cpy-cli": "^6.0.0",
+    "date-fns": "^4.1.0",
     "eslint": "9.39.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^17.0.0",
+    "lucide-react": "^0.512.0",
+    "prism-react-renderer": "^2.4.1",
     "npm-run-all2": "8.0.4",
     "path-exists-cli": "2.0.0",
     "pkg-pr-new": "^0.0.60",
     "prettier": "3.6.2",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "react-resizable-panels": "^4.0.13",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.3.0",
+    "tsc-alias": "^1.8.16",
     "typescript": "5.9.3",
     "typescript-eslint": "8.47.0",
     "vite": "7.2.6",
     "vitest": "4.0.17"
   },
   "types": "./dist/client/index.d.ts",
-  "module": "./dist/client/index.js"
+  "module": "./dist/client/index.js",
+  "bin": {
+    "convex-versioned-assets": "./dist/setup/index.js"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

@@ -232,58 +232,6 @@ describe("getAssetVersions", () => {
   });
 });
 
-describe("configureStorageBackend", () => {
-  let t: TestConvex<typeof schema>;
-
-  beforeEach(() => {
-    t = convexTest(schema, modules);
-  });
-
-  it("configures convex backend", async () => {
-    await t.mutation(api.assetManager.configureStorageBackend, {
-      backend: "convex",
-    });
-
-    const config = await t.query(api.assetManager.getStorageBackendConfig, {});
-    expect(config).toBe("convex");
-  });
-
-  it("configures r2 backend with required r2PublicUrl", async () => {
-    await t.mutation(api.assetManager.configureStorageBackend, {
-      backend: "r2",
-      r2PublicUrl: "https://assets.example.com",
-    });
-
-    const config = await t.query(api.assetManager.getStorageBackendConfig, {});
-    expect(config).toBe("r2");
-  });
-
-  it("throws error when r2 backend configured without r2PublicUrl", async () => {
-    await expect(
-      t.mutation(api.assetManager.configureStorageBackend, {
-        backend: "r2",
-      }),
-    ).rejects.toThrow(/r2PublicUrl is required/);
-  });
-
-  it("updates existing config", async () => {
-    // First configure convex
-    await t.mutation(api.assetManager.configureStorageBackend, {
-      backend: "convex",
-    });
-
-    // Then switch to r2
-    await t.mutation(api.assetManager.configureStorageBackend, {
-      backend: "r2",
-      r2PublicUrl: "https://cdn.example.com",
-      r2KeyPrefix: "myapp",
-    });
-
-    const config = await t.query(api.assetManager.getStorageBackendConfig, {});
-    expect(config).toBe("r2");
-  });
-});
-
 describe("startUpload and finishUpload", () => {
   let t: TestConvex<typeof schema>;
 

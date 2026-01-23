@@ -13,7 +13,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
 
-    "composite": true,
     "isolatedModules": true,
     "declaration": true,
     "declarationMap": true,

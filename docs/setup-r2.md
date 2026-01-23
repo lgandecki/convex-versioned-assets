@@ -11,26 +11,13 @@ convex-versioned-assets.
 ## Step 1: Create an R2 Bucket
 
 1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. Navigate to **R2 Object Storage** in the sidebar
+2. Use Quick Search (command + K) to navigate to **R2 Object Storage**
 3. Click **Create bucket**
 4. Choose a bucket name (e.g., `my-app-assets`)
 5. Select a location (optional)
 6. Click **Create bucket**
 
-## Step 2: Create API Credentials
-
-1. In the R2 dashboard, click **Manage R2 API Tokens**
-2. Click **Create API token**
-3. Configure the token:
-   - **Token name**: e.g., `convex-asset-manager`
-   - **Permissions**: Select **Object Read & Write**
-   - **Specify bucket(s)**: Select your bucket
-4. Click **Create API Token**
-5. **Save these values** (shown only once):
-   - Access Key ID
-   - Secret Access Key
-
-## Step 3: Configure CORS
+## Step 2: Configure CORS
 
 CORS must be configured to allow uploads from your frontend.
 
@@ -43,6 +30,7 @@ CORS must be configured to allow uploads from your frontend.
     "AllowedOrigins": [
       "http://localhost:3000",
       "http://localhost:3001",
+      "http://localhost:5173",
       "https://your-app.com"
     ],
     "AllowedMethods": ["GET", "PUT", "HEAD"],
@@ -59,31 +47,49 @@ CORS must be configured to allow uploads from your frontend.
   domain)
 - `PUT` is required for R2 uploads (not POST)
 - `AllowedHeaders: ["*"]` is required for presigned URL uploads
-- Add your production domain before deploying
 
-## Step 4: Set Up a Custom Domain (Required for Public Access)
+## Step 3: Set Up a Custom Domain (Required for Public Access)
 
 For public file access via CDN, you need a custom domain:
 
-1. In your bucket settings, go to **Settings** → **Public access**
+1. In your bucket settings click on _Custom Domains_
 2. Click **Connect Domain**
 3. Enter your subdomain (e.g., `assets.yourdomain.com`)
 4. Follow the DNS configuration instructions
-5. Wait for SSL certificate provisioning (usually a few minutes)
+5. SSL certificate provisioning will be automatically provisioned while we
+   continue with step 4
 
-Your public URL will be: `https://assets.yourdomain.com`
+## Step 4: Create API Credentials
+
+1. Go back to R2 Object Storage overview - Quick Search (command + K) **R2
+   Object Storage**
+2. In Account Details -> API Tokens click on **_Manage_**
+3. Click **Create Account API token**
+4. Configure the token:
+   - **Token name**: e.g., `convex-versioned-assets`
+   - **Permissions**: Select **Object Read & Write**
+   - **Specify bucket(s)**: Select your bucket
+5. Click **Create Account API Token**
+6. **Save these secrets** (shown only once):
+   - Access Key ID (R2_ACCESS_KEY_ID)
+   - Secret Access Key (R2_SECRET_ACCESS_KEY)
+7. Save the default endpoint (should look like this:
+   `https://2343sdfsdf.r2.cloudflarestorage.com`) (R2_ENDPOINT)
 
 ## Step 5: Configure Environment Variables
 
-Add these environment variables to your Convex project:
+Add these environment variables to your `.env.local` file:
 
 ```bash
-# In your Convex dashboard or .env.local
+# Cloudflare R2 Configuration
 R2_BUCKET=your-bucket-name
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_PUBLIC_URL=https://assets.yourdomain.com
 R2_ACCESS_KEY_ID=your-access-key-id
 R2_SECRET_ACCESS_KEY=your-secret-access-key
-R2_PUBLIC_URL=https://assets.yourdomain.com
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+
+# Optional: Prefix for namespacing files in shared buckets
+# R2_KEY_PREFIX=my-app
 ```
 
 To find your account ID and endpoint:
@@ -92,67 +98,28 @@ To find your account ID and endpoint:
 2. Click on your bucket
 3. The endpoint is shown in the bucket details
 
-## Step 6: Configure the Component
+## Step 6: Push Configuration to Convex
 
-In your Convex backend, configure the storage backend:
+Run the r2setup CLI command to push your environment variables to Convex:
 
-```typescript
-// convex/setup.ts (run once or in a migration)
-import { mutation } from "./_generated/server";
-import { components } from "./_generated/api";
-
-export const configureR2 = mutation({
-  args: {},
-  handler: async (ctx) => {
-    await ctx.runMutation(
-      components.versionedAssets.assetManager.configureStorageBackend,
-      {
-        backend: "r2",
-        r2PublicUrl: process.env.R2_PUBLIC_URL!,
-        // Optional: prefix to namespace files when sharing a bucket
-        r2KeyPrefix: "my-app",
-      },
-    );
-  },
-});
+```bash
+npx convex-versioned-assets r2setup
 ```
 
-## Step 7: Create R2 Config Helper
+This command will:
 
-Create a helper to pass R2 credentials to the component:
-
-```typescript
-// convex/r2Config.ts
-export function getR2Config() {
-  const config = {
-    R2_BUCKET: process.env.R2_BUCKET,
-    R2_ENDPOINT: process.env.R2_ENDPOINT,
-    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
-    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
-  };
-
-  // Validate all required env vars are present
-  for (const [key, value] of Object.entries(config)) {
-    if (!value) {
-      throw new Error(`Missing required environment variable: ${key}`);
-    }
-  }
-
-  return config as {
-    R2_BUCKET: string;
-    R2_ENDPOINT: string;
-    R2_ACCESS_KEY_ID: string;
-    R2_SECRET_ACCESS_KEY: string;
-  };
-}
-```
+1. Read R2 variables from your `.env.local` (or `.env`)
+2. Validate that all required variables are present
+3. Push them to Convex environment variables
 
 ## Verifying Your Setup
 
-Test the configuration by uploading a file:
+Use the admin panel to upload a file and verify it appears in your R2 bucket.
+
+You can also verify programmatically:
 
 ```typescript
-// In your app
+// Check the backend being used
 const { intentId, uploadUrl, backend } = await ctx.runMutation(
   components.versionedAssets.assetManager.startUpload,
   {
@@ -165,6 +132,65 @@ const { intentId, uploadUrl, backend } = await ctx.runMutation(
 
 console.log("Backend:", backend); // Should be "r2"
 console.log("Upload URL:", uploadUrl); // Should be R2 presigned URL
+```
+
+## Migrating Existing Files to R2
+
+If you have existing files stored in Convex storage that you want to migrate to
+R2:
+
+### Option 1: Migrate individual versions
+
+```typescript
+// In a script or admin action
+const result = await ctx.runAction(
+  components.versionedAssets.migration.migrateVersionToR2Action,
+  {
+    versionId: "version_id_here",
+    r2Config: getR2Config(),
+  },
+);
+console.log("Migrated to R2 with key:", result.r2Key);
+```
+
+### Option 2: Batch migrate all files
+
+```typescript
+// List files that need migration
+const { versions, total } = await ctx.runQuery(
+  components.versionedAssets.migration.listVersionsToMigrate,
+  { limit: 50 },
+);
+console.log(`${versions.length} of ${total} files need migration`);
+
+// Migrate each version
+for (const version of versions) {
+  await ctx.runAction(
+    components.versionedAssets.migration.migrateVersionToR2Action,
+    {
+      versionId: version.versionId,
+      r2Config: getR2Config(),
+    },
+  );
+}
+```
+
+### Option 3: Backfill r2PublicUrl for existing R2 files
+
+If you already have files in R2 but they don't have the `r2PublicUrl` stored on
+each version (uploaded before this feature), run the backfill:
+
+```typescript
+// Run until done
+let isDone = false;
+while (!isDone) {
+  const result = await ctx.runAction(
+    components.versionedAssets.migration.backfillR2PublicUrlAction,
+    { batchSize: 50 },
+  );
+  console.log(`Updated ${result.updated} of ${result.total} versions`);
+  isDone = result.isDone;
+}
 ```
 
 ## Troubleshooting
@@ -188,7 +214,7 @@ If you see CORS errors in the browser console:
 
 - Verify the custom domain is properly configured
 - Check that the domain's SSL certificate is active
-- Ensure `r2PublicUrl` in the component config matches your domain
+- Ensure `R2_PUBLIC_URL` is set correctly in your environment
 
 ## Next Steps
 

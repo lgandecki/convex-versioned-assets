@@ -1,104 +1,39 @@
-import {
-  mutation,
-  query,
-  type QueryCtx,
-  type MutationCtx,
-} from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { slugify } from "./slugify";
 import { allocateFolderSegment } from "./allocateFolderSegment";
 import { getActorFields } from "./authAdapter";
 import { type Id } from "./_generated/dataModel";
-import { folderFields, assetFields, assetVersionFields } from "./validators";
+import {
+  folderFields,
+  assetFields,
+  assetVersionFields,
+  r2ConfigValidator,
+} from "./validators";
 import { storageBackendValidator } from "./schema";
 import { createR2Client } from "./r2Client";
 import { logChange } from "./helpers/changelog";
-
-// Validator for R2 config passed from app layer
-const r2ConfigValidator = v.object({
-  R2_BUCKET: v.string(),
-  R2_ENDPOINT: v.string(),
-  R2_ACCESS_KEY_ID: v.string(),
-  R2_SECRET_ACCESS_KEY: v.string(),
-});
 
 const ROOT_PARENT = "" as const;
 
 // Default upload URL expiration: 1 hour
 const UPLOAD_INTENT_EXPIRY_MS = 60 * 60 * 1000;
 
-interface StorageConfig {
-  backend: "convex" | "r2";
-  r2PublicUrl?: string;
-  r2KeyPrefix?: string;
-}
-
 // =============================================================================
 // Storage Type Helpers
 // =============================================================================
 
-// interface StorageReference {
-//   storageId?: Id<"_storage">;
-//   r2Key?: string;
-// }
-
-// function isStoredOnConvex(
-//   ref: StorageReference,
-// ): ref is StorageReference & { storageId: Id<"_storage"> } {
-//   return ref.storageId !== undefined;
-// }
-
-// function isStoredOnR2(ref: StorageReference): ref is StorageReference & { r2Key: string } {
-//   return ref.r2Key !== undefined;
-// }
-
 /**
- * Get the current storage backend configuration.
- * Defaults to "convex" if no configuration exists.
+ * Get the full R2 public URL for a version.
+ * Uses r2PublicUrl stored on the version at upload time.
  */
-async function getStorageBackend(
-  ctx: QueryCtx | MutationCtx,
-): Promise<"convex" | "r2"> {
-  const config = await getStorageConfig(ctx);
-  return config.backend;
-}
-
-/**
- * Get the full storage configuration including R2 public URL.
- */
-async function getStorageConfig(
-  ctx: QueryCtx | MutationCtx,
-): Promise<StorageConfig> {
-  const config = await ctx.db
-    .query("storageConfig")
-    .withIndex("by_singleton", (q) => q.eq("singleton", "storageConfig"))
-    .first();
-  return {
-    backend: config?.backend ?? "convex",
-    r2PublicUrl: config?.r2PublicUrl,
-    r2KeyPrefix: config?.r2KeyPrefix,
-  };
-}
-
-/**
- * Get the public URL for an R2 key.
- * Uses the configured r2PublicUrl from storageConfig.
- * Requires r2PublicUrl to be configured - no fallback to signed URLs.
- */
-async function getR2PublicUrl(
-  ctx: QueryCtx | MutationCtx,
-  r2Key: string,
-): Promise<string | null> {
-  const config = await getStorageConfig(ctx);
-  if (!config.r2PublicUrl) {
-    console.error(
-      "R2 public URL not configured. Call configureStorageBackend with r2PublicUrl.",
-    );
-    return null;
-  }
-  // Remove trailing slash if present, then append key
-  const baseUrl = config.r2PublicUrl.replace(/\/+$/, "");
-  return `${baseUrl}/${r2Key}`;
+function getR2PublicUrl(version: {
+  r2Key?: string;
+  r2PublicUrl?: string;
+}): string | null {
+  if (!version.r2Key || !version.r2PublicUrl) return null;
+  const baseUrl = version.r2PublicUrl.replace(/\/+$/, "");
+  return `${baseUrl}/${version.r2Key}`;
 }
 
 function normalizeFolderPath(raw: string): string {
@@ -155,73 +90,6 @@ async function queueConvexDeletion(
 }
 
 // =============================================================================
-// Storage Backend Configuration
-// =============================================================================
-
-/**
- * Configure which storage backend to use for new uploads.
- * Call once to switch from Convex storage to R2 (or back).
- *
- * For R2, you must provide r2PublicUrl - the public URL base for serving files
- * (e.g., "https://assets.yourdomain.com"). This requires setting up a custom
- * domain on your R2 bucket in Cloudflare.
- *
- * Optionally provide r2KeyPrefix to namespace files when sharing a bucket
- * across multiple apps (e.g., "my-app" results in keys like "my-app/abc123/file.mp3").
- */
-export const configureStorageBackend = mutation({
-  args: {
-    backend: storageBackendValidator,
-    // Required when backend is "r2" - the public URL base for serving files
-    r2PublicUrl: v.optional(v.string()),
-    // Optional prefix for R2 keys to avoid collisions when sharing a bucket
-    r2KeyPrefix: v.optional(v.string()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    // Validate R2 config
-    if (args.backend === "r2" && !args.r2PublicUrl) {
-      throw new Error(
-        "r2PublicUrl is required when using R2 backend. " +
-          "Set up a custom domain on your R2 bucket and provide the URL.",
-      );
-    }
-
-    const existing = await ctx.db
-      .query("storageConfig")
-      .withIndex("by_singleton", (q) => q.eq("singleton", "storageConfig"))
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        backend: args.backend,
-        r2PublicUrl: args.r2PublicUrl,
-        r2KeyPrefix: args.r2KeyPrefix,
-      });
-    } else {
-      await ctx.db.insert("storageConfig", {
-        singleton: "storageConfig",
-        backend: args.backend,
-        r2PublicUrl: args.r2PublicUrl,
-        r2KeyPrefix: args.r2KeyPrefix,
-      });
-    }
-    return null;
-  },
-});
-
-/**
- * Get the current storage backend configuration.
- */
-export const getStorageBackendConfig = query({
-  args: {},
-  returns: storageBackendValidator,
-  handler: async (ctx) => {
-    return await getStorageBackend(ctx);
-  },
-});
-
-// =============================================================================
 // Intent-based Upload Flow
 // =============================================================================
 
@@ -257,8 +125,10 @@ export const startUpload = mutation({
 
     const now = Date.now();
     const actorFields = await getActorFields(ctx);
-    const storageConfig = await getStorageConfig(ctx);
-    const backend = storageConfig.backend;
+
+    // Backend is determined by whether r2Config is provided
+    // No need to call configureStorageBackend - just pass r2Config to use R2
+    const backend: "r2" | "convex" = args.r2Config ? "r2" : "convex";
 
     // Create upload intent first (we need the ID for R2 key)
     const intentId = await ctx.db.insert("uploadIntents", {
@@ -278,20 +148,17 @@ export const startUpload = mutation({
     let r2Key: string | undefined;
 
     if (backend === "r2") {
-      if (!args.r2Config) {
-        throw new Error("r2Config is required when using R2 backend");
-      }
       // Build R2 key: {prefix/}{intentId}/{filename}
       const filename = args.filename ?? args.basename;
-      const prefix = storageConfig.r2KeyPrefix
-        ? `${storageConfig.r2KeyPrefix}/`
+      const prefix = args.r2Config!.R2_KEY_PREFIX
+        ? `${args.r2Config!.R2_KEY_PREFIX}/`
         : "";
       r2Key = `${prefix}${intentId}/${filename}`;
 
       // Update intent with the r2Key
       await ctx.db.patch(intentId, { r2Key });
 
-      const r2Client = createR2Client(args.r2Config);
+      const r2Client = createR2Client(args.r2Config!);
       const result = await r2Client.generateUploadUrl(r2Key);
       uploadUrl = result.url;
     } else {
@@ -346,6 +213,7 @@ export const finishUpload = mutation({
     // Get file metadata based on backend
     let storageId: Id<"_storage"> | undefined;
     let r2Key: string | undefined;
+    let r2PublicUrl: string | undefined;
     let size: number | undefined;
     let contentType: string | undefined;
     let sha256: string | undefined;
@@ -355,6 +223,11 @@ export const finishUpload = mutation({
         throw new Error("R2 upload intent missing r2Key");
       }
       r2Key = intent.r2Key;
+
+      // Store the R2 public URL with the version
+      // This allows each file to know its own URL, enabling URL changes
+      // without breaking old files
+      r2PublicUrl = args.r2Config!.R2_PUBLIC_URL;
 
       // Use client-provided metadata (can't fetch from R2 in a mutation)
       size = args.size;
@@ -423,6 +296,7 @@ export const finishUpload = mutation({
       label: intent.label,
       storageId,
       r2Key,
+      r2PublicUrl,
       originalFilename: intent.filename ?? intent.basename,
       uploadStatus: "ready",
       size,
@@ -511,7 +385,7 @@ function joinPath(parent: string, segment: string): string {
 
 export const createFolderByName = mutation({
   args: { parentPath: v.string(), name: v.string() },
-  returns: v.id("folders"),
+  returns: v.string(), // Returns the folder path, not the ID
   handler: async (ctx, args) => {
     const normalizedParentPath = normalizeFolderPath(args.parentPath);
     const slugifiedName = slugify(args.name);
@@ -539,7 +413,7 @@ export const createFolderByName = mutation({
 
     const now = Date.now();
     const actorFields = await getActorFields(ctx);
-    const id = await ctx.db.insert("folders", {
+    await ctx.db.insert("folders", {
       path: newFolderPath,
       name: args.name,
       createdAt: now,
@@ -552,7 +426,7 @@ export const createFolderByName = mutation({
       performedBy: actorFields.createdBy,
     });
 
-    return id;
+    return newFolderPath;
   },
 });
 
@@ -667,6 +541,7 @@ export const listFoldersWithAssets = query({
       string,
       {
         r2Key?: string;
+        r2PublicUrl?: string;
         storageId?: Id<"_storage">;
         contentType?: string;
         size?: number;
@@ -677,6 +552,7 @@ export const listFoldersWithAssets = query({
       if (version) {
         versionsMap.set(versionId, {
           r2Key: version.r2Key,
+          r2PublicUrl: version.r2PublicUrl,
           storageId: version.storageId,
           contentType: version.contentType,
           size: version.size,
@@ -684,13 +560,11 @@ export const listFoldersWithAssets = query({
       }
     }
 
-    const storageConfig = await getStorageConfig(ctx);
-    const r2BaseUrl = storageConfig.r2PublicUrl?.replace(/\/+$/, "");
-
     const urlsMap = new Map<string, string>();
     for (const [versionId, version] of versionsMap) {
-      if (version.r2Key && r2BaseUrl) {
-        urlsMap.set(versionId, `${r2BaseUrl}/${version.r2Key}`);
+      const r2Url = getR2PublicUrl(version);
+      if (r2Url) {
+        urlsMap.set(versionId, r2Url);
       } else if (version.storageId) {
         const url = await ctx.storage.getUrl(version.storageId);
         if (url) urlsMap.set(versionId, url);
@@ -1187,6 +1061,7 @@ export const restoreVersion = mutation({
       label,
       storageId: sourceVersion.storageId,
       r2Key: sourceVersion.r2Key,
+      r2PublicUrl: sourceVersion.r2PublicUrl,
       size: sourceVersion.size,
       contentType: sourceVersion.contentType,
       sha256: sourceVersion.sha256,
@@ -1271,7 +1146,7 @@ export const getPublishedFile = query({
     // Get URL based on storage backend
     let url: string | null = null;
     if (version.r2Key) {
-      url = await getR2PublicUrl(ctx, version.r2Key);
+      url = getR2PublicUrl(version);
     } else if (version.storageId) {
       url = await ctx.storage.getUrl(version.storageId);
     }
@@ -1336,7 +1211,7 @@ export const listPublishedFilesInFolder = query({
       // Get URL based on storage backend
       let url: string | null = null;
       if (version.r2Key) {
-        url = await getR2PublicUrl(ctx, version.r2Key);
+        url = getR2PublicUrl(version);
       } else if (version.storageId) {
         url = await ctx.storage.getUrl(version.storageId);
       }

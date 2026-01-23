@@ -1,22 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export const storageBackendValidator = v.union(v.literal("convex"), v.literal("r2"));
+export const storageBackendValidator = v.union(
+  v.literal("convex"),
+  v.literal("r2"),
+);
 
 const schema = defineSchema({
-  /**
-   * Storage backend configuration singleton.
-   * Default (no row) = "convex" storage.
-   */
-  storageConfig: defineTable({
-    singleton: v.literal("storageConfig"),
-    backend: storageBackendValidator,
-    // For R2: the public URL base for serving files (e.g., "https://assets.yourdomain.com")
-    r2PublicUrl: v.optional(v.string()),
-    // For R2: optional prefix for keys to avoid collisions when sharing a bucket across apps
-    r2KeyPrefix: v.optional(v.string()),
-  }).index("by_singleton", ["singleton"]),
-
   /**
    * Upload intents track in-progress uploads.
    * Created by startUpload, finalized by finishUpload.
@@ -73,6 +63,9 @@ const schema = defineSchema({
     // File storage metadata - one of storageId (Convex) or r2Key (R2) will be set
     storageId: v.optional(v.id("_storage")),
     r2Key: v.optional(v.string()),
+    // R2 public URL base stored at upload time (e.g., "https://assets.yourdomain.com")
+    // Allows each file to know its own URL, enabling URL changes without breaking old files
+    r2PublicUrl: v.optional(v.string()),
     originalFilename: v.optional(v.string()),
     uploadStatus: v.optional(v.union(v.literal("pending"), v.literal("ready"))),
     size: v.optional(v.number()),

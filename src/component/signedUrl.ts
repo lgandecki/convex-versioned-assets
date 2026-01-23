@@ -3,19 +3,12 @@ import { anyApi } from "convex/server";
 import { v } from "convex/values";
 import { createR2Client } from "./r2Client";
 import { type Id } from "./_generated/dataModel";
+import { r2ConfigValidator } from "./validators";
 
 // Use anyApi to avoid circular type references when calling internal queries
 // from actions in the same component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix this, need to look into the circular dependency
+ 
 const internal = anyApi as { internalQueries: { getVersionStorageInfo: any } };
-
-// Validator for R2 config passed from app layer
-const r2ConfigValidator = v.object({
-  R2_BUCKET: v.string(),
-  R2_ENDPOINT: v.string(),
-  R2_ACCESS_KEY_ID: v.string(),
-  R2_SECRET_ACCESS_KEY: v.string(),
-});
 
 // =============================================================================
 // Storage Type Helpers
@@ -32,7 +25,9 @@ function isStoredOnConvex(
   return ref.storageId !== undefined;
 }
 
-function isStoredOnR2(ref: StorageReference): ref is StorageReference & { r2Key: string } {
+function isStoredOnR2(
+  ref: StorageReference,
+): ref is StorageReference & { r2Key: string } {
   return ref.r2Key !== undefined;
 }
 
@@ -61,9 +56,12 @@ export const getSignedUrl = action({
   },
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, { versionId, expiresIn = 300, r2Config }) => {
-    const version = await ctx.runQuery(internal.internalQueries.getVersionStorageInfo, {
-      versionId,
-    });
+    const version = await ctx.runQuery(
+      internal.internalQueries.getVersionStorageInfo,
+      {
+        versionId,
+      },
+    );
     if (!version) return null;
 
     if (isStoredOnConvex(version)) {

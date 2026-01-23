@@ -5,6 +5,20 @@
 import { v } from "convex/values";
 
 /**
+ * Validator for R2 config passed from app layer.
+ * Components can't access env vars, so apps must pass R2 credentials explicitly.
+ */
+export const r2ConfigValidator = v.object({
+  R2_BUCKET: v.string(),
+  R2_ENDPOINT: v.string(),
+  R2_ACCESS_KEY_ID: v.string(),
+  R2_SECRET_ACCESS_KEY: v.string(),
+  R2_PUBLIC_URL: v.string(),
+  // Optional: prefix for keys to namespace files in shared buckets
+  R2_KEY_PREFIX: v.optional(v.string()),
+});
+
+/**
  * Validator fields for a folder document.
  * Use with v.object(folderFields) for returns validators.
  */
@@ -49,6 +63,7 @@ export const assetVersionFields = {
   label: v.optional(v.string()),
   storageId: v.optional(v.id("_storage")),
   r2Key: v.optional(v.string()),
+  r2PublicUrl: v.optional(v.string()),
   originalFilename: v.optional(v.string()),
   uploadStatus: v.optional(v.union(v.literal("pending"), v.literal("ready"))),
   size: v.optional(v.number()),
