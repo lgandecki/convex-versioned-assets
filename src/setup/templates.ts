@@ -1714,7 +1714,7 @@ function LogoutButton() {
 
 export function AssetDemo() {
   const folderPath = "/";
-  const basename = "hero-image";
+  const basename = "hero-image.jpg";
   return (
     <div className="asset-demo-container">
       <Authenticated>
