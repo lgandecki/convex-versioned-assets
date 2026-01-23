@@ -206,7 +206,7 @@ async function step1PreflightChecks(state: SetupState): Promise<void> {
 /**
  * Step 2: Check and install dependencies
  */
-async function step2Dependencies(state: SetupState): Promise<void> {
+async function step2Dependencies(_state: SetupState): Promise<void> {
   logStep(2, TOTAL_STEPS, "Dependencies");
 
   const pm = detectPackageManager();
@@ -433,7 +433,7 @@ async function step6PushToConvex(state: SetupState): Promise<void> {
 /**
  * Step 7: Install admin UI frontend dependencies
  */
-async function step7InstallAdminDeps(state: SetupState): Promise<void> {
+async function step7InstallAdminDeps(_state: SetupState): Promise<void> {
   logStep(7, TOTAL_STEPS, "Installing admin UI dependencies");
 
   const pm = detectPackageManager();

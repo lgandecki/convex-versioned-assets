@@ -9,6 +9,7 @@ export default [
     ignores: [
       "dist/**",
       "example/dist/**",
+      "admin-example/**",
       "*.config.{js,mjs,cjs,ts,tsx}",
       "example/**/*.config.{js,mjs,cjs,ts,tsx}",
       "**/_generated/",

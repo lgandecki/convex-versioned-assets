@@ -224,7 +224,7 @@ function parseEnvLine(line: string): { key: string; value: string } | null {
   if (eqIndex === -1) return null;
 
   const key = trimmed.slice(0, eqIndex).trim();
-  let rest = trimmed.slice(eqIndex + 1);
+  const rest = trimmed.slice(eqIndex + 1);
 
   // Parse value, respecting quotes
   let value: string;

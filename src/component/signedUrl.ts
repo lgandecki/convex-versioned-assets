@@ -7,7 +7,7 @@ import { r2ConfigValidator } from "./validators";
 
 // Use anyApi to avoid circular type references when calling internal queries
 // from actions in the same component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix this, need to look into the circular dependency
+ 
 const internal = anyApi as { internalQueries: { getVersionStorageInfo: any } };
 
 // =============================================================================
