@@ -8,6 +8,23 @@ convex-versioned-assets.
 - A Cloudflare account
 - A Convex project with `convex-versioned-assets` installed
 
+## Step 0:
+
+Add following scaffold env to your .env.local file, we will be editing it as we
+go.
+
+hint: You can already set the R2_KEY_PREFIX to namespace your files in the
+bucket so you can share a bucket with multiple apps if needed. Very handy!
+
+```
+R2_KEY_PREFIX=your-app-name
+R2_BUCKET=your-bucket-name
+R2_PUBLIC_URL=https://assets.yourdomain.com
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+```
+
 ## Step 1: Create an R2 Bucket
 
 1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com)
@@ -16,6 +33,8 @@ convex-versioned-assets.
 4. Choose a bucket name (e.g., `my-app-assets`)
 5. Select a location (optional)
 6. Click **Create bucket**
+7. Copy the bucket name and paste it into your .env.local file as
+   R2_BUCKET=<your-bucket-name>
 
 ## Step 2: Configure CORS
 
@@ -58,6 +77,8 @@ For public file access via CDN, you need a custom domain:
 4. Follow the DNS configuration instructions
 5. SSL certificate provisioning will be automatically provisioned while we
    continue with step 4
+6. Copy the custom domain and paste it into your .env.local file as
+   R2_PUBLIC_URL=https://assets.yourdomain.com
 
 ## Step 4: Create API Credentials
 
@@ -71,14 +92,15 @@ For public file access via CDN, you need a custom domain:
    - **Specify bucket(s)**: Select your bucket
 5. Click **Create Account API Token**
 6. **Save these secrets** (shown only once):
-   - Access Key ID (R2_ACCESS_KEY_ID)
-   - Secret Access Key (R2_SECRET_ACCESS_KEY)
+   - Access Key ID as R2_ACCESS_KEY_ID
+   - Secret Access Key as R2_SECRET_ACCESS_KEY
 7. Save the default endpoint (should look like this:
-   `https://2343sdfsdf.r2.cloudflarestorage.com`) (R2_ENDPOINT)
+   `https://2343sdfsdf.r2.cloudflarestorage.com`) as R2_ENDPOINT
 
-## Step 5: Configure Environment Variables
+## Step 5: Environment Variables Verification
 
-Add these environment variables to your `.env.local` file:
+Make sure you have all the following environment variables set in your
+.env.local file:
 
 ```bash
 # Cloudflare R2 Configuration
@@ -87,12 +109,12 @@ R2_PUBLIC_URL=https://assets.yourdomain.com
 R2_ACCESS_KEY_ID=your-access-key-id
 R2_SECRET_ACCESS_KEY=your-secret-access-key
 R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-# Optional but recommended: Prefix for namespacing files in shared buckets 
+# Optional but recommended: Prefix for namespacing files in shared buckets
 # - you will be able to create multiple apps using the same bucket
 # R2_KEY_PREFIX=my-app
 ```
 
-To find your account ID and endpoint:
+If you missed it, here is how you can find your account ID and endpoint:
 
 1. Go to R2 dashboard
 2. Click on your bucket
