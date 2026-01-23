@@ -161,6 +161,17 @@ console.log("Upload URL:", uploadUrl); // Should be R2 presigned URL
 If you have existing files stored in Convex storage that you want to migrate to
 R2:
 
+### Migrate all files
+
+If you used the setup script, you can run the following command to migrate all
+files to R2:
+
+```bash
+./scripts/convex run versionedAssets:migrateAllToR2
+```
+
+Otherwise you can use the following code:
+
 ### Option 1: Migrate individual versions
 
 ```typescript
