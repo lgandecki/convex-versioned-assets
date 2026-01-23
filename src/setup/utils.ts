@@ -35,8 +35,14 @@ export function logError(message: string): void {
   console.log(`${colors.red}✗${colors.reset} ${message}`);
 }
 
-export function logStep(step: number, totalSteps: number, message: string): void {
-  console.log(`\n${colors.cyan}[${step}/${totalSteps}]${colors.reset} ${colors.bright}${message}${colors.reset}`);
+export function logStep(
+  step: number,
+  totalSteps: number,
+  message: string,
+): void {
+  console.log(
+    `\n${colors.cyan}[${step}/${totalSteps}]${colors.reset} ${colors.bright}${message}${colors.reset}`,
+  );
 }
 
 export function logInfo(message: string): void {
@@ -63,7 +69,10 @@ export async function prompt(question: string): Promise<string> {
 /**
  * Prompt user for yes/no confirmation
  */
-export async function confirm(question: string, defaultYes = true): Promise<boolean> {
+export async function confirm(
+  question: string,
+  defaultYes = true,
+): Promise<boolean> {
   const suffix = defaultYes ? "[Y/n]" : "[y/N]";
   const answer = await prompt(`${question} ${suffix} `);
 
@@ -72,6 +81,18 @@ export async function confirm(question: string, defaultYes = true): Promise<bool
   }
 
   return answer.toLowerCase().startsWith("y");
+}
+
+/**
+ * Check if current directory is a git repository
+ */
+export function isGitRepo(): boolean {
+  try {
+    execSync("git rev-parse --git-dir", { encoding: "utf8", stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -140,7 +161,10 @@ export function detectPackageManager(): PackageManager {
   const cwd = process.cwd();
 
   // Check for bun (both old .lockb and new .lock format)
-  if (fileExists(path.join(cwd, "bun.lock")) || fileExists(path.join(cwd, "bun.lockb"))) {
+  if (
+    fileExists(path.join(cwd, "bun.lock")) ||
+    fileExists(path.join(cwd, "bun.lockb"))
+  ) {
     return "bun";
   }
   if (fileExists(path.join(cwd, "pnpm-lock.yaml"))) {
@@ -155,7 +179,10 @@ export function detectPackageManager(): PackageManager {
 /**
  * Get the install command for a package manager
  */
-export function getInstallCommand(pm: PackageManager, packages: string[]): string {
+export function getInstallCommand(
+  pm: PackageManager,
+  packages: string[],
+): string {
   const pkgList = packages.join(" ");
   switch (pm) {
     case "bun":
@@ -173,7 +200,10 @@ export function getInstallCommand(pm: PackageManager, packages: string[]): strin
 /**
  * Run a shell command and return success status
  */
-export function runCommand(command: string, options?: { silent?: boolean }): boolean {
+export function runCommand(
+  command: string,
+  options?: { silent?: boolean },
+): boolean {
   try {
     execSync(command, {
       stdio: options?.silent ? "pipe" : "inherit",
@@ -206,7 +236,9 @@ export function isPackageInstalled(packageName: string): boolean {
 
   try {
     const pkg = JSON.parse(content);
-    return !!(pkg.dependencies?.[packageName] || pkg.devDependencies?.[packageName]);
+    return !!(
+      pkg.dependencies?.[packageName] || pkg.devDependencies?.[packageName]
+    );
   } catch {
     return false;
   }
@@ -285,14 +317,19 @@ export function readEnvFile(filePath: string): Map<string, string> {
  * Add or update a value in .env.local file.
  * Preserves existing lines, comments, and formatting.
  */
-export function upsertEnvValue(filePath: string, key: string, value: string): void {
+export function upsertEnvValue(
+  filePath: string,
+  key: string,
+  value: string,
+): void {
   const content = readFile(filePath) || "";
   const lines = content.split("\n");
 
   // Format the new value (quote if needed)
-  const formattedValue = value.includes(" ") || value.includes("=") || value.includes("#")
-    ? `"${value}"`
-    : value;
+  const formattedValue =
+    value.includes(" ") || value.includes("=") || value.includes("#")
+      ? `"${value}"`
+      : value;
   const newLine = `${key}=${formattedValue}`;
 
   // Find existing line with this key
@@ -332,23 +369,34 @@ export function generateAdminKey(): string {
  * Push environment variable to Convex.
  * Uses spawnSync with array args to avoid shell escaping issues.
  */
-export function pushEnvToConvex(key: string, value: string): { success: boolean; error?: string } {
+export function pushEnvToConvex(
+  key: string,
+  value: string,
+): { success: boolean; error?: string } {
   try {
     // Use spawnSync with array args to avoid shell escaping issues with special characters
     // Use "--" to prevent values starting with "-" being parsed as options
-    const result = spawnSync("npx", ["convex", "env", "set", "--", key, value], {
-      stdio: ["pipe", "pipe", "pipe"],
-      encoding: "utf8",
-    });
+    const result = spawnSync(
+      "npx",
+      ["convex", "env", "set", "--", key, value],
+      {
+        stdio: ["pipe", "pipe", "pipe"],
+        encoding: "utf8",
+      },
+    );
 
     if (result.status === 0) {
       return { success: true };
     }
 
-    const errorOutput = result.stderr?.trim() || result.stdout?.trim() || "Unknown error";
+    const errorOutput =
+      result.stderr?.trim() || result.stdout?.trim() || "Unknown error";
     return { success: false, error: errorOutput };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 

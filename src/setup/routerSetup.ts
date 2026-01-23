@@ -25,6 +25,8 @@ import {
   indexRouteTemplate,
   adminFileRouteTemplate,
   mainTsxWithRouterTemplate,
+  assetDemoComponentTemplate,
+  assetDemoCssTemplate,
 } from "./templates.js";
 import {
   transformViteConfig,
@@ -37,6 +39,7 @@ export interface RouterSetupResult {
   steps: {
     dependencies: boolean;
     routes: boolean;
+    components: boolean;
     viteConfig: boolean;
     mainTsx: boolean;
     gitignore: boolean;
@@ -128,6 +131,56 @@ export function createRouteFiles(projectRoot: string): {
       return {
         success: false,
         reason: `Failed to create admin.tsx: ${err}`,
+      };
+    }
+  }
+
+  return { success: true };
+}
+
+/**
+ * Create AssetDemo component files in src/components/.
+ */
+export function createAssetDemoFiles(projectRoot: string): {
+  success: boolean;
+  reason?: string;
+} {
+  const componentsDir = path.join(projectRoot, "src", "components");
+
+  // Create components directory
+  if (!directoryExists(componentsDir)) {
+    try {
+      fs.mkdirSync(componentsDir, { recursive: true });
+    } catch (err) {
+      return {
+        success: false,
+        reason: `Failed to create components directory: ${err}`,
+      };
+    }
+  }
+
+  // Create AssetDemo.tsx
+  const demoPath = path.join(componentsDir, "AssetDemo.tsx");
+  if (!fileExists(demoPath)) {
+    try {
+      writeFile(demoPath, assetDemoComponentTemplate);
+    } catch (err) {
+      return {
+        success: false,
+        reason: `Failed to create AssetDemo.tsx: ${err}`,
+      };
+    }
+  }
+
+  // Create AssetDemo.css
+  const cssPath = path.join(componentsDir, "AssetDemo.css");
+  if (!fileExists(cssPath)) {
+    try {
+      writeFile(cssPath, assetDemoCssTemplate);
+    } catch (err) {
+      return {
+        success: false,
+        reason: `Failed to create AssetDemo.css: ${err}`,
       };
     }
   }
@@ -289,6 +342,7 @@ export async function setupTanStackRouter(
     steps: {
       dependencies: false,
       routes: false,
+      components: false,
       viteConfig: false,
       mainTsx: false,
       gitignore: false,
@@ -309,28 +363,35 @@ export async function setupTanStackRouter(
   }
   result.steps.routes = true;
 
-  // Step 3: Update vite.config.ts
+  // Step 3: Create AssetDemo component files
+  const componentsResult = createAssetDemoFiles(projectRoot);
+  if (!componentsResult.success) {
+    return { ...result, reason: componentsResult.reason };
+  }
+  result.steps.components = true;
+
+  // Step 4: Update vite.config.ts
   const viteResult = updateViteConfig(projectRoot);
   if (!viteResult.success) {
     return { ...result, reason: viteResult.reason };
   }
   result.steps.viteConfig = true;
 
-  // Step 4: Update main.tsx
+  // Step 5: Update main.tsx
   const mainResult = updateMainTsx(projectRoot);
   if (!mainResult.success) {
     return { ...result, reason: mainResult.reason };
   }
   result.steps.mainTsx = true;
 
-  // Step 5: Update .gitignore
+  // Step 6: Update .gitignore
   const gitignoreResult = updateGitignore(projectRoot);
   if (!gitignoreResult.success) {
     return { ...result, reason: gitignoreResult.reason };
   }
   result.steps.gitignore = true;
 
-  // Step 6: Remove App.tsx (routes replace it)
+  // Step 7: Remove App.tsx (routes replace it)
   removeAppTsx(projectRoot);
   // Don't fail if this doesn't work
 

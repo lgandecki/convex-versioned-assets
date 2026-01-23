@@ -6,7 +6,7 @@
  */
 import { v } from "convex/values";
 import { components } from "./_generated/api";
-import { adminQuery, adminMutation, adminAction, publicQuery } from "./functions";
+import { adminQuery, adminMutation, adminAction, authedMutation, publicQuery, } from "./functions";
 // ============================================================================
 // Folder Operations
 // ============================================================================
@@ -68,7 +68,11 @@ export const createAsset = adminMutation({
     },
 });
 export const renameAsset = adminMutation({
-    args: { folderPath: v.string(), basename: v.string(), newBasename: v.string() },
+    args: {
+        folderPath: v.string(),
+        basename: v.string(),
+        newBasename: v.string(),
+    },
     handler: async (ctx, args) => {
         return await ctx.runMutation(components.versionedAssets.assetManager.renameAsset, args);
     },
@@ -76,13 +80,13 @@ export const renameAsset = adminMutation({
 // ============================================================================
 // Version Operations
 // ============================================================================
-export const getAssetVersions = adminQuery({
+export const getAssetVersions = publicQuery({
     args: { folderPath: v.string(), basename: v.string() },
     handler: async (ctx, args) => {
         return await ctx.runQuery(components.versionedAssets.assetManager.getAssetVersions, args);
     },
 });
-export const getPublishedFile = adminQuery({
+export const getPublishedFile = publicQuery({
     args: { folderPath: v.string(), basename: v.string() },
     handler: async (ctx, args) => {
         return await ctx.runQuery(components.versionedAssets.assetManager.getPublishedFile, args);
@@ -94,7 +98,7 @@ export const listPublishedFilesInFolder = publicQuery({
         return await ctx.runQuery(components.versionedAssets.assetManager.listPublishedFilesInFolder, args);
     },
 });
-export const restoreVersion = adminMutation({
+export const restoreVersion = authedMutation({
     args: { versionId: v.string(), label: v.optional(v.string()) },
     handler: async (ctx, args) => {
         return await ctx.runMutation(components.versionedAssets.assetManager.restoreVersion, args);
@@ -103,7 +107,7 @@ export const restoreVersion = adminMutation({
 // ============================================================================
 // Preview & Content Operations
 // ============================================================================
-export const getVersionPreviewUrl = adminQuery({
+export const getVersionPreviewUrl = publicQuery({
     args: { versionId: v.string() },
     handler: async (ctx, args) => {
         return await ctx.runQuery(components.versionedAssets.assetFsHttp.getVersionPreviewUrl, args);
@@ -126,7 +130,11 @@ export const getTextContent = adminAction({
  * For initial fetch, use cursorCreatedAt: 0, cursorId: ""
  */
 export const watchChangelog = adminQuery({
-    args: { cursorCreatedAt: v.number(), cursorId: v.string(), limit: v.optional(v.number()) },
+    args: {
+        cursorCreatedAt: v.number(),
+        cursorId: v.string(),
+        limit: v.optional(v.number()),
+    },
     handler: async (ctx, args) => {
         const cursor = { createdAt: args.cursorCreatedAt, id: args.cursorId };
         return await ctx.runQuery(components.versionedAssets.changelog.listSince, {
