@@ -497,6 +497,36 @@ export const watchFolderChanges = adminQuery({
     });
   },
 });
+
+
+export const migrateAllToR2 = adminAction({
+  args: {},
+  handler: async (ctx) => {
+    const r2Config = {
+      R2_BUCKET: process.env.R2_BUCKET!,
+      R2_ENDPOINT: process.env.R2_ENDPOINT!,
+      R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
+      R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
+      R2_PUBLIC_URL: process.env.R2_PUBLIC_URL!,
+      R2_KEY_PREFIX: process.env.R2_KEY_PREFIX
+    };
+
+    const { versions } = await ctx.runQuery(
+      components.versionedAssets.migration.listVersionsToMigrate,
+      {}
+    );
+
+    for (const v of versions) {
+      const result = await ctx.runAction(
+        components.versionedAssets.migration.migrateVersionToR2Action,
+        { versionId: v.versionId, r2Config }
+      );
+      console.log("Migrated", v.versionId, "->", result.r2Key);
+    }
+
+    return { migrated: versions.length };
+  }
+});
 `;
 
 /**
@@ -505,11 +535,17 @@ export const watchFolderChanges = adminQuery({
 export const generateUploadUrlTemplate = `import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { components } from "./_generated/api";
-import { adminMutation, publicQuery, publicAction } from "./functions";
+import { adminMutation, publicAction } from "./functions";
 
 /**
  * Get R2 config from env vars. Returns undefined if not configured.
  * Called once per request, passed to component functions.
+ *
+ * When R2 is configured (R2_BUCKET env var is set), uploads go to R2.
+ * Otherwise, uploads use Convex storage.
+ *
+ * R2_PUBLIC_URL is required and stored with each file version at upload time,
+ * enabling URL changes without breaking existing file links.
  */
 function getR2Config() {
   if (!process.env.R2_BUCKET) return undefined;
@@ -518,44 +554,12 @@ function getR2Config() {
     R2_ENDPOINT: process.env.R2_ENDPOINT!,
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
+    R2_PUBLIC_URL: process.env.R2_PUBLIC_URL!,
+    R2_KEY_PREFIX: process.env.R2_KEY_PREFIX,
   };
 }
 
-// =============================================================================
-// Storage Backend Configuration
-// =============================================================================
-
 const storageBackendValidator = v.union(v.literal("convex"), v.literal("r2"));
-
-/**
- * Configure which storage backend to use for new uploads - ADMIN ONLY.
- * Default is "convex". Call with "r2" to use Cloudflare R2.
- */
-export const configureStorageBackend = adminMutation({
-  args: {
-    backend: storageBackendValidator,
-    r2PublicUrl: v.optional(v.string()),
-    r2KeyPrefix: v.optional(v.string()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    return await ctx.runMutation(
-      components.versionedAssets.assetManager.configureStorageBackend,
-      args,
-    );
-  },
-});
-
-/**
- * Get the current storage backend configuration.
- */
-export const getStorageBackendConfig = publicQuery({
-  args: {},
-  returns: storageBackendValidator,
-  handler: async (ctx) => {
-    return await ctx.runQuery(components.versionedAssets.assetManager.getStorageBackendConfig, {});
-  },
-});
 
 // =============================================================================
 // Upload Flow
@@ -1047,3 +1051,238 @@ export default function App() {
   );
 }
 `;
+
+// =============================================================================
+// TanStack Router Templates
+// =============================================================================
+
+/**
+ * TanStack Router dependencies needed for routing setup.
+ */
+export const TANSTACK_ROUTER_DEPS = [
+  "@tanstack/react-router",
+  "@tanstack/router-plugin",
+];
+
+/**
+ * Root route template for TanStack Router.
+ * This is the parent route for all other routes.
+ */
+export const rootRouteTemplate = `import { createRootRoute, Outlet } from "@tanstack/react-router";
+
+export const Route = createRootRoute({
+  component: () => <Outlet />,
+});
+`;
+
+/**
+ * Index route template for TanStack Router.
+ * This is the default route at "/".
+ */
+export const indexRouteTemplate = `import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/")({
+  component: () => (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">Your App</h1>
+      <p>Build your application here. Assets are available via the API.</p>
+    </div>
+  ),
+});
+`;
+
+/**
+ * Admin route template for TanStack Router file-based routing.
+ * This creates the /admin route with authentication.
+ */
+export const adminFileRouteTemplate = `import { createFileRoute } from "@tanstack/react-router";
+import { Authenticated, Unauthenticated } from "convex/react";
+import {
+  AdminPanel,
+  AdminUIProvider,
+  LoginModal,
+} from "convex-versioned-assets/admin-ui";
+import "convex-versioned-assets/admin-ui/styles";
+import { api } from "../../convex/_generated/api";
+
+export const Route = createFileRoute("/admin")({
+  component: AdminRoute,
+});
+
+function AdminRoute() {
+  return (
+    <AdminUIProvider api={api}>
+      <Authenticated>
+        <AdminPanel />
+      </Authenticated>
+      <Unauthenticated>
+        <LoginModal open={true} />
+      </Unauthenticated>
+    </AdminUIProvider>
+  );
+}
+`;
+
+/**
+ * Main.tsx template with TanStack Router and React Query.
+ * Includes ConvexQueryClient for React Query integration.
+ */
+export const mainTsxWithRouterTemplate = `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexQueryClient } from "@convex-dev/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
+import "./index.css";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+const convexQueryClient = new ConvexQueryClient(convex);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryKeyHashFn: convexQueryClient.hashFn(),
+      queryFn: convexQueryClient.queryFn(),
+    },
+  },
+});
+convexQueryClient.connect(queryClient);
+
+const router = createRouter({ routeTree });
+
+// Register router for type-safe navigation (Link, useNavigate, useParams)
+// https://tanstack.com/router/latest/docs/framework/react/guide/type-safety
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <ConvexAuthProvider client={convex}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ConvexAuthProvider>
+  </StrictMode>,
+);
+`;
+
+// =============================================================================
+// Admin Route Component Templates (for existing apps)
+// =============================================================================
+
+/**
+ * AdminRoute component template for apps with existing routing.
+ * Users import this component and add it to their router at /admin.
+ */
+export const adminRouteComponentTemplate = `import { Authenticated, Unauthenticated } from "convex/react";
+import {
+  AdminPanel,
+  AdminUIProvider,
+  LoginModal,
+} from "convex-versioned-assets/admin-ui";
+import "convex-versioned-assets/admin-ui/styles";
+import { api } from "../../convex/_generated/api";
+
+export function AdminRoute() {
+  return (
+    <AdminUIProvider api={api}>
+      <Authenticated>
+        <AdminPanel />
+      </Authenticated>
+      <Unauthenticated>
+        <LoginModal open={true} />
+      </Unauthenticated>
+    </AdminUIProvider>
+  );
+}
+`;
+
+/**
+ * Generate admin route instructions for apps with existing routing.
+ * Provides examples for different routers.
+ */
+export function generateAdminRouteInstructions(): string {
+  return `# Adding Admin Panel to Your App
+
+We've created \`src/components/AdminRoute.tsx\` for you.
+Add it to your router at the \`/admin\` path.
+
+## 1. Configure Tailwind CSS (Required)
+
+The admin panel requires Tailwind CSS to be configured to scan the admin-ui styles.
+
+**Tailwind v4** (uses \`@import "tailwindcss"\`):
+Add this line after your tailwindcss import in your main CSS file (e.g., \`index.css\`):
+
+\`\`\`css
+@import "tailwindcss";
+
+/* Include convex-versioned-assets admin-ui classes */
+@source "../node_modules/convex-versioned-assets/dist/admin-ui/**/*.js";
+\`\`\`
+
+**Tailwind v3** (uses \`tailwind.config.js\`):
+Add to the \`content\` array in your \`tailwind.config.js\`:
+
+\`\`\`js
+module.exports = {
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/convex-versioned-assets/dist/admin-ui/**/*.js",
+  ],
+  // ...
+};
+\`\`\`
+
+## 2. Add Route to Your Router
+
+### React Router
+
+\`\`\`tsx
+import { AdminRoute } from "./components/AdminRoute";
+
+<Routes>
+  <Route path="/admin" element={<AdminRoute />} />
+  {/* your other routes */}
+</Routes>
+\`\`\`
+
+### Wouter
+
+\`\`\`tsx
+import { AdminRoute } from "./components/AdminRoute";
+
+<Switch>
+  <Route path="/admin" component={AdminRoute} />
+  {/* your other routes */}
+</Switch>
+\`\`\`
+
+### TanStack Router (code-based)
+
+\`\`\`tsx
+import { AdminRoute } from "./components/AdminRoute";
+
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminRoute,
+});
+\`\`\`
+
+### No Router (manual)
+
+\`\`\`tsx
+import { AdminRoute } from "./components/AdminRoute";
+
+function App() {
+  const isAdmin = window.location.pathname === '/admin';
+  return isAdmin ? <AdminRoute /> : <YourMainApp />;
+}
+\`\`\`
+`;
+}

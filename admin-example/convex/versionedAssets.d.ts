@@ -115,6 +115,7 @@ export declare const getAssetVersions: import("convex/server").RegisteredQuery<"
     publishedAt?: number;
     publishedBy?: string;
     r2Key?: string;
+    r2PublicUrl?: string;
     sha256?: string;
     size?: number;
     state: "published" | "archived";

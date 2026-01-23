@@ -12,6 +12,49 @@ import type { ComponentApi } from "../component/_generated/component.js";
 // Re-export the component API type for consumers
 export type { ComponentApi };
 
+// CORS headers for cross-origin requests (e.g., fetching assets from a different origin)
+export const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+/**
+ * Extract version ID from a URL pathname.
+ * Expected format: /{prefix}/v/{versionId} or /{prefix}/v/{versionId}/{filename}
+ * The filename after versionId is optional and ignored (used for human-readable URLs).
+ */
+export function parseVersionId(pathname: string): string | null {
+  const parts = pathname.split("/v/");
+  if (parts.length < 2) return null;
+
+  const afterV = parts[1];
+  if (!afterV) return null;
+
+  // Extract just the versionId (first segment after /v/)
+  const versionId = afterV.split("/")[0];
+  return versionId || null;
+}
+
+/**
+ * Extract folder path and basename from a URL pathname.
+ * Expected format: /{prefix}/{folderPath}/{basename} or /{prefix}/{basename}
+ */
+export function parseAssetPath(
+  pathname: string,
+  prefix: string,
+): { folderPath: string; basename: string } | null {
+  const pathAfterPrefix = pathname.slice(prefix.length + 1);
+  const segments = pathAfterPrefix.split("/").filter(Boolean);
+
+  if (segments.length === 0) return null;
+
+  const basename = segments.pop()!;
+  const folderPath = segments.join("/");
+
+  return { folderPath, basename };
+}
+
 /**
  * Register HTTP routes for serving assets.
  *
@@ -37,6 +80,15 @@ export function registerAssetRoutes(
 ) {
   const prefix = options.pathPrefix ?? "/assets";
 
+  // Handle CORS preflight requests for version route
+  http.route({
+    pathPrefix: `${prefix}/v/`,
+    method: "OPTIONS",
+    handler: httpActionGeneric(async () => {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }),
+  });
+
   // Serve files by version ID: /assets/v/{versionId}
   // NOTE: Must be registered BEFORE the general path route (more specific prefix first)
   http.route({
@@ -44,10 +96,13 @@ export function registerAssetRoutes(
     method: "GET",
     handler: httpActionGeneric(async (ctx, request) => {
       const url = new URL(request.url);
-      const versionId = url.pathname.split("/v/")[1];
+      const versionId = parseVersionId(url.pathname);
 
       if (!versionId) {
-        return new Response("Version ID required", { status: 400 });
+        return new Response("Version ID required", {
+          status: 400,
+          headers: corsHeaders,
+        });
       }
 
       const result = await ctx.runQuery(
@@ -56,13 +111,14 @@ export function registerAssetRoutes(
       );
 
       if (!result) {
-        return new Response("Not found", { status: 404 });
+        return new Response("Not found", { status: 404, headers: corsHeaders });
       }
 
       if (result.kind === "redirect") {
         return new Response(null, {
           status: 302,
           headers: {
+            ...corsHeaders,
             Location: result.location,
             "Cache-Control": result.cacheControl ?? "public, max-age=60",
           },
@@ -75,16 +131,26 @@ export function registerAssetRoutes(
       );
 
       if (!blob) {
-        return new Response("Not found", { status: 404 });
+        return new Response("Not found", { status: 404, headers: corsHeaders });
       }
 
       return new Response(blob, {
         headers: {
+          ...corsHeaders,
           "Content-Type": result.contentType ?? "application/octet-stream",
           "Cache-Control":
             result.cacheControl ?? "public, max-age=31536000, immutable",
         },
       });
+    }),
+  });
+
+  // Handle CORS preflight requests for path route
+  http.route({
+    pathPrefix: `${prefix}/`,
+    method: "OPTIONS",
+    handler: httpActionGeneric(async () => {
+      return new Response(null, { status: 204, headers: corsHeaders });
     }),
   });
 
@@ -94,15 +160,13 @@ export function registerAssetRoutes(
     method: "GET",
     handler: httpActionGeneric(async (ctx, request) => {
       const url = new URL(request.url);
-      const pathAfterPrefix = url.pathname.slice(prefix.length + 1);
-      const segments = pathAfterPrefix.split("/").filter(Boolean);
+      const parsed = parseAssetPath(url.pathname, prefix);
 
-      if (segments.length === 0) {
-        return new Response("Not found", { status: 404 });
+      if (!parsed) {
+        return new Response("Not found", { status: 404, headers: corsHeaders });
       }
 
-      const basename = segments.pop()!;
-      const folderPath = segments.join("/");
+      const { folderPath, basename } = parsed;
 
       const result = await ctx.runQuery(
         component.assetFsHttp.getPublishedFileForServing,
@@ -110,13 +174,14 @@ export function registerAssetRoutes(
       );
 
       if (!result) {
-        return new Response("Not found", { status: 404 });
+        return new Response("Not found", { status: 404, headers: corsHeaders });
       }
 
       if (result.kind === "redirect") {
         return new Response(null, {
           status: 302,
           headers: {
+            ...corsHeaders,
             Location: result.location,
             "Cache-Control": result.cacheControl ?? "public, max-age=60",
           },
@@ -130,11 +195,12 @@ export function registerAssetRoutes(
       );
 
       if (!blob) {
-        return new Response("Not found", { status: 404 });
+        return new Response("Not found", { status: 404, headers: corsHeaders });
       }
 
       return new Response(blob, {
         headers: {
+          ...corsHeaders,
           "Content-Type": result.contentType ?? "application/octet-stream",
           "Cache-Control":
             result.cacheControl ?? "public, max-age=31536000, immutable",

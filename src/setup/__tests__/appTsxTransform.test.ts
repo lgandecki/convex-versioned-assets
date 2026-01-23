@@ -166,20 +166,26 @@ describe("appTsxTransform", () => {
 
       const transformed = result.transformed!;
 
-      // Check expected imports
-      expect(transformed).toContain('import { useState } from "react";');
-      expect(transformed).toContain('import { Authenticated, Unauthenticated } from "convex/react";');
-      expect(transformed).toContain('import { AdminPanel } from "@/admin-ui/AdminPanel";');
-      expect(transformed).toContain('import { LoginModal } from "@/admin-ui/components/LoginModal";');
+      // Check expected library imports
+      expect(transformed).toContain(
+        'import { Authenticated, Unauthenticated } from "convex/react";',
+      );
+      expect(transformed).toContain(
+        'import { AdminPanel, AdminUIProvider, LoginModal } from "convex-versioned-assets/admin-ui";',
+      );
+      expect(transformed).toContain(
+        'import "convex-versioned-assets/admin-ui/styles";',
+      );
+      expect(transformed).toContain(
+        'import { api } from "../convex/_generated/api";',
+      );
 
-      // Check state hooks
-      expect(transformed).toContain('const [folderPath, setFolderPath] = useState("");');
-      expect(transformed).toContain('const [selectedAsset, setSelectedAsset]');
-      expect(transformed).toContain('const [selectedVersionId, setSelectedVersionId]');
+      // Check AdminUIProvider wrapper
+      expect(transformed).toContain("<AdminUIProvider api={api}>");
 
       // Check component structure
-      expect(transformed).toContain("<AdminPanel");
-      expect(transformed).toContain("<LoginModal");
+      expect(transformed).toContain("<AdminPanel />");
+      expect(transformed).toContain("<LoginModal open={true} />");
       expect(transformed).toContain("<Authenticated>");
       expect(transformed).toContain("<Unauthenticated>");
     });
@@ -207,6 +213,7 @@ describe("appTsxTransform", () => {
 
       expect(analysis.hasAdminPanel).toBe(false);
       expect(analysis.isFreshTemplate).toBe(true);
+      expect(analysis.isCustomized).toBe(false);
       expect(analysis.hasCustomRouting).toBe(false);
       expect(analysis.componentCount).toBeGreaterThanOrEqual(1);
     });
@@ -217,18 +224,29 @@ describe("appTsxTransform", () => {
       expect(analysis.hasAdminPanel).toBe(true);
     });
 
-    it("correctly identifies custom routing", () => {
+    it("correctly identifies custom routing and sets isCustomized", () => {
       const analysis = analyzeAppTsx(CUSTOMIZED_APP_TSX);
 
       expect(analysis.hasCustomRouting).toBe(true);
+      expect(analysis.isCustomized).toBe(true);
+      expect(analysis.isFreshTemplate).toBe(false);
     });
 
-    it("handles simple non-Convex App.tsx", () => {
+    it("handles simple non-Convex App.tsx as customized", () => {
       const analysis = analyzeAppTsx(SIMPLE_APP_TSX);
 
       expect(analysis.hasAdminPanel).toBe(false);
       expect(analysis.isFreshTemplate).toBe(false);
+      expect(analysis.isCustomized).toBe(true);
       expect(analysis.hasCustomRouting).toBe(false);
+    });
+
+    it("isCustomized is inverse of isFreshTemplate", () => {
+      const freshAnalysis = analyzeAppTsx(FRESH_APP_TSX);
+      const customAnalysis = analyzeAppTsx(CUSTOMIZED_APP_TSX);
+
+      expect(freshAnalysis.isCustomized).toBe(!freshAnalysis.isFreshTemplate);
+      expect(customAnalysis.isCustomized).toBe(!customAnalysis.isFreshTemplate);
     });
   });
 });

@@ -125,16 +125,6 @@ export declare const components: {
         { basename: string; folderPath: string; label?: string },
         { assetId: string; version: number; versionId: string }
       >;
-      configureStorageBackend: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          backend: "convex" | "r2";
-          r2KeyPrefix?: string;
-          r2PublicUrl?: string;
-        },
-        null
-      >;
       createAsset: FunctionReference<
         "mutation",
         "internal",
@@ -212,6 +202,8 @@ export declare const components: {
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
           size?: number;
@@ -254,6 +246,7 @@ export declare const components: {
           publishedAt?: number;
           publishedBy?: string;
           r2Key?: string;
+          r2PublicUrl?: string;
           sha256?: string;
           size?: number;
           state: "published" | "archived";
@@ -340,12 +333,6 @@ export declare const components: {
         "internal",
         { pathPrefix: string },
         Array<string>
-      >;
-      getStorageBackendConfig: FunctionReference<
-        "query",
-        "internal",
-        {},
-        "convex" | "r2"
       >;
       listAllFolders: FunctionReference<
         "query",
@@ -539,6 +526,8 @@ export declare const components: {
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
         },
@@ -574,6 +563,85 @@ export declare const components: {
         any
       >;
     };
+    migration: {
+      batchCleanupMigratedVersions: FunctionReference<
+        "mutation",
+        "internal",
+        { versionIds: Array<string> },
+        {
+          cleaned: number;
+          errors: Array<{ reason: string; versionId: string }>;
+          skipped: number;
+        }
+      >;
+      cleanupMigratedVersion: FunctionReference<
+        "mutation",
+        "internal",
+        { versionId: string },
+        { cleaned: boolean; storageId?: string }
+      >;
+      getMigrationStats: FunctionReference<
+        "query",
+        "internal",
+        {},
+        {
+          noStorage: number;
+          onBoth: number;
+          onConvexOnly: number;
+          onR2Only: number;
+          totalVersions: number;
+        }
+      >;
+      listVersionsNeedingR2PublicUrl: FunctionReference<
+        "query",
+        "internal",
+        { cursor?: string; limit?: number },
+        {
+          hasMore: boolean;
+          nextCursor?: string;
+          total: number;
+          versionIds: Array<string>;
+        }
+      >;
+      listVersionsToMigrate: FunctionReference<
+        "query",
+        "internal",
+        { cursor?: string; limit?: number },
+        {
+          nextCursor?: string;
+          total: number;
+          versions: Array<{
+            assetPath: string;
+            contentType?: string;
+            size?: number;
+            version: number;
+            versionId: string;
+          }>;
+        }
+      >;
+      migrateVersionToR2Action: FunctionReference<
+        "action",
+        "internal",
+        {
+          r2Config: {
+            R2_ACCESS_KEY_ID: string;
+            R2_BUCKET: string;
+            R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
+            R2_SECRET_ACCESS_KEY: string;
+          };
+          versionId: string;
+        },
+        { r2Key: string; versionId: string }
+      >;
+      setVersionR2PublicUrl: FunctionReference<
+        "mutation",
+        "internal",
+        { r2PublicUrl: string; versionId: string },
+        boolean
+      >;
+    };
     signedUrl: {
       getSignedUrl: FunctionReference<
         "action",
@@ -584,6 +652,8 @@ export declare const components: {
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
           versionId: string;

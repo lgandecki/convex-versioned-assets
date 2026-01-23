@@ -1,10 +1,16 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { components } from "./_generated/api";
-import { adminMutation, publicQuery, publicAction } from "./functions";
+import { adminMutation, publicAction } from "./functions";
 /**
  * Get R2 config from env vars. Returns undefined if not configured.
  * Called once per request, passed to component functions.
+ *
+ * When R2 is configured (R2_BUCKET env var is set), uploads go to R2.
+ * Otherwise, uploads use Convex storage.
+ *
+ * R2_PUBLIC_URL is required and stored with each file version at upload time,
+ * enabling URL changes without breaking existing file links.
  */
 function getR2Config() {
     if (!process.env.R2_BUCKET)
@@ -14,44 +20,11 @@ function getR2Config() {
         R2_ENDPOINT: process.env.R2_ENDPOINT,
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+        R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
+        R2_KEY_PREFIX: process.env.R2_KEY_PREFIX,
     };
 }
-// =============================================================================
-// Storage Backend Configuration
-// =============================================================================
 const storageBackendValidator = v.union(v.literal("convex"), v.literal("r2"));
-/**
- * Configure which storage backend to use for new uploads - ADMIN ONLY.
- * Default is "convex". Call with "r2" to use Cloudflare R2.
- *
- * For R2, you must provide:
- * - Env vars: R2_BUCKET, R2_TOKEN, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT
- * - r2PublicUrl: The public URL for your R2 bucket (requires custom domain setup in Cloudflare)
- * - r2KeyPrefix (optional): Prefix for R2 keys to avoid collisions when sharing a bucket
- */
-export const configureStorageBackend = adminMutation({
-    args: {
-        backend: storageBackendValidator,
-        // Required when backend is "r2" - the public URL for serving files
-        r2PublicUrl: v.optional(v.string()),
-        // Optional prefix for R2 keys when sharing a bucket across multiple apps
-        r2KeyPrefix: v.optional(v.string()),
-    },
-    returns: v.null(),
-    handler: async (ctx, args) => {
-        return await ctx.runMutation(components.versionedAssets.assetManager.configureStorageBackend, args);
-    },
-});
-/**
- * Get the current storage backend configuration.
- */
-export const getStorageBackendConfig = publicQuery({
-    args: {},
-    returns: storageBackendValidator,
-    handler: async (ctx) => {
-        return await ctx.runQuery(components.versionedAssets.assetManager.getStorageBackendConfig, {});
-    },
-});
 // =============================================================================
 // Upload Flow
 // =============================================================================
@@ -89,7 +62,7 @@ export const startUploadInternal = internalMutation({
     args: {
         folderPath: v.string(),
         basename: v.string(),
-        filename: v.optional(v.string()), // Original filename with extension for URLs
+        filename: v.optional(v.string()),
         label: v.optional(v.string()),
     },
     returns: v.object({
@@ -107,9 +80,6 @@ export const startUploadInternal = internalMutation({
 });
 /**
  * Finish an upload. Creates the asset version from a completed upload intent.
- *
- * Pass the raw JSON response from the upload POST. The backend extracts what
- * it needs based on the storage backend (Convex or R2).
  */
 export const finishUpload = adminMutation({
     args: {
@@ -120,7 +90,11 @@ export const finishUpload = adminMutation({
         folderPath: v.optional(v.string()),
         basename: v.optional(v.string()),
     },
-    returns: v.object({ assetId: v.string(), versionId: v.string(), version: v.number() }),
+    returns: v.object({
+        assetId: v.string(),
+        versionId: v.string(),
+        version: v.number(),
+    }),
     handler: async (ctx, args) => {
         const result = await ctx.runMutation(components.versionedAssets.assetManager.finishUpload, {
             intentId: args.intentId,
@@ -142,7 +116,11 @@ export const finishUploadInternal = internalMutation({
         folderPath: v.optional(v.string()),
         basename: v.optional(v.string()),
     },
-    returns: v.object({ assetId: v.string(), versionId: v.string(), version: v.number() }),
+    returns: v.object({
+        assetId: v.string(),
+        versionId: v.string(),
+        version: v.number(),
+    }),
     handler: async (ctx, args) => {
         const result = await ctx.runMutation(components.versionedAssets.assetManager.finishUpload, {
             intentId: args.intentId,
@@ -160,11 +138,6 @@ export const finishUploadInternal = internalMutation({
 /**
  * Generate a signed URL for private file access.
  * Works with both Convex storage and R2.
- *
- * NOTE: This is public - for private files, implement your own auth wrapper.
- *
- * For audio/video files, use longer expiration (e.g., 3600 = 1 hour)
- * to handle seeking and buffering during playback.
  */
 export const getSignedUrl = publicAction({
     args: {

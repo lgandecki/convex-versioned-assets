@@ -96,17 +96,6 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         { assetId: string; version: number; versionId: string },
         Name
       >;
-      configureStorageBackend: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          backend: "convex" | "r2";
-          r2KeyPrefix?: string;
-          r2PublicUrl?: string;
-        },
-        null,
-        Name
-      >;
       createAsset: FunctionReference<
         "mutation",
         "internal",
@@ -192,6 +181,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
           size?: number;
@@ -236,6 +227,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           publishedAt?: number;
           publishedBy?: string;
           r2Key?: string;
+          r2PublicUrl?: string;
           sha256?: string;
           size?: number;
           state: "published" | "archived";
@@ -327,13 +319,6 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         { pathPrefix: string },
         Array<string>,
-        Name
-      >;
-      getStorageBackendConfig: FunctionReference<
-        "query",
-        "internal",
-        {},
-        "convex" | "r2",
         Name
       >;
       listAllFolders: FunctionReference<
@@ -542,6 +527,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
         },
@@ -581,6 +568,92 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         Name
       >;
     };
+    migration: {
+      batchCleanupMigratedVersions: FunctionReference<
+        "mutation",
+        "internal",
+        { versionIds: Array<string> },
+        {
+          cleaned: number;
+          errors: Array<{ reason: string; versionId: string }>;
+          skipped: number;
+        },
+        Name
+      >;
+      cleanupMigratedVersion: FunctionReference<
+        "mutation",
+        "internal",
+        { versionId: string },
+        { cleaned: boolean; storageId?: string },
+        Name
+      >;
+      getMigrationStats: FunctionReference<
+        "query",
+        "internal",
+        {},
+        {
+          noStorage: number;
+          onBoth: number;
+          onConvexOnly: number;
+          onR2Only: number;
+          totalVersions: number;
+        },
+        Name
+      >;
+      listVersionsNeedingR2PublicUrl: FunctionReference<
+        "query",
+        "internal",
+        { cursor?: string; limit?: number },
+        {
+          hasMore: boolean;
+          nextCursor?: string;
+          total: number;
+          versionIds: Array<string>;
+        },
+        Name
+      >;
+      listVersionsToMigrate: FunctionReference<
+        "query",
+        "internal",
+        { cursor?: string; limit?: number },
+        {
+          nextCursor?: string;
+          total: number;
+          versions: Array<{
+            assetPath: string;
+            contentType?: string;
+            size?: number;
+            version: number;
+            versionId: string;
+          }>;
+        },
+        Name
+      >;
+      migrateVersionToR2Action: FunctionReference<
+        "action",
+        "internal",
+        {
+          r2Config: {
+            R2_ACCESS_KEY_ID: string;
+            R2_BUCKET: string;
+            R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
+            R2_SECRET_ACCESS_KEY: string;
+          };
+          versionId: string;
+        },
+        { r2Key: string; versionId: string },
+        Name
+      >;
+      setVersionR2PublicUrl: FunctionReference<
+        "mutation",
+        "internal",
+        { r2PublicUrl: string; versionId: string },
+        boolean,
+        Name
+      >;
+    };
     signedUrl: {
       getSignedUrl: FunctionReference<
         "action",
@@ -591,6 +664,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             R2_ACCESS_KEY_ID: string;
             R2_BUCKET: string;
             R2_ENDPOINT: string;
+            R2_KEY_PREFIX?: string;
+            R2_PUBLIC_URL: string;
             R2_SECRET_ACCESS_KEY: string;
           };
           versionId: string;

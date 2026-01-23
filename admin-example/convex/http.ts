@@ -6,9 +6,7 @@ import { components } from "./_generated/api";
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
-// Asset serving routes - serves files at /am/file/v/{versionId}
-
+// Asset serving routes - serves files at /assets/v/{versionId}
 registerAssetFsRoutes(http, components.versionedAssets);
-
 
 export default http;

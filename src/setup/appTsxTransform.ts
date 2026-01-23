@@ -161,26 +161,33 @@ export function replaceAppTsx(content: string): AppTsxTransformResult {
   };
 }
 
+export interface AppTsxAnalysis {
+  hasAdminPanel: boolean;
+  isFreshTemplate: boolean;
+  isCustomized: boolean;
+  componentCount: number;
+  hasCustomRouting: boolean;
+}
+
 /**
  * Get information about whether App.tsx looks customized.
  * This helps the setup script decide whether to ask for confirmation.
+ *
+ * Returns:
+ * - hasAdminPanel: true if AdminPanel is already imported
+ * - isFreshTemplate: true if this looks like a fresh create-convex template
+ * - isCustomized: true if the app has been customized (not fresh)
+ * - componentCount: number of React components detected
+ * - hasCustomRouting: true if routing library imports are detected
  */
-export function analyzeAppTsx(content: string): {
-  hasAdminPanel: boolean;
-  isFreshTemplate: boolean;
-  componentCount: number;
-  hasCustomRouting: boolean;
-} {
+export function analyzeAppTsx(content: string): AppTsxAnalysis {
   try {
     const sourceFile = parseContent(content);
 
     // Count components (function declarations and arrow function variables)
     let componentCount = 0;
     sourceFile.getFunctions().forEach((fn) => {
-      if (
-        fn.getName()?.match(/^[A-Z]/) ||
-        fn.isDefaultExport()
-      ) {
+      if (fn.getName()?.match(/^[A-Z]/) || fn.isDefaultExport()) {
         componentCount++;
       }
     });
@@ -205,9 +212,12 @@ export function analyzeAppTsx(content: string): {
       );
     });
 
+    const isFresh = isFreshTemplate(content);
+
     return {
       hasAdminPanel: hasAdminPanel(content),
-      isFreshTemplate: isFreshTemplate(content),
+      isFreshTemplate: isFresh,
+      isCustomized: !isFresh,
       componentCount,
       hasCustomRouting,
     };
@@ -215,6 +225,7 @@ export function analyzeAppTsx(content: string): {
     return {
       hasAdminPanel: false,
       isFreshTemplate: false,
+      isCustomized: true, // Default to customized if we can't parse
       componentCount: 0,
       hasCustomRouting: false,
     };
